@@ -1,0 +1,9 @@
+@HGT.EAM.WebServices_HostAddress = http://localhost:5074
+
+GET {{HGT.EAM.WebServices_HostAddress}}/api/test/public
+Accept: application/json
+###
+
+GET {{HGT.EAM.WebServices_HostAddress}}/api/test/private
+Accept: application/json
+###
