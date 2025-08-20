@@ -1,8 +1,8 @@
-﻿using HGT.EAM.WebServices.Infraestructure.Architecture.Exceptions;
+﻿using HGT.EAM.WebServices.Infrastructure.Architecture.Exceptions;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 
-namespace HGT.EAM.WebServices.Infraestructure.Architecture.Middlewares;
+namespace HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 
 public class ExceptionMiddleware(RequestDelegate next)
 {

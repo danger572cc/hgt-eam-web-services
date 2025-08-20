@@ -15,12 +15,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\HGT.EAM.WebServices.Conector\HGT.EAM.WebServices.Conector.csproj" />
-    <ProjectReference Include="..\HGT.EAM.WebServices.Infraestructure\HGT.EAM.WebServices.Infraestructure.csproj" />
+    <ProjectReference Include="..\HGT.EAM.WebServices.Infraestructure\HGT.EAM.WebServices.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Application\Queries\" />
-    <Folder Include="Middlewares\" />
   </ItemGroup>
 
 </Project>

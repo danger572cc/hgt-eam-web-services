@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Runtime.CompilerServices;
 
-namespace HGT.EAM.WebServices.Infraestructure.Architecture.Controller;
+namespace HGT.EAM.WebServices.Infrastructure.Architecture.Controller;
 
 public class HGTController(IMediator mediator, ILogger<HGTController> logger) : ControllerBase
 {

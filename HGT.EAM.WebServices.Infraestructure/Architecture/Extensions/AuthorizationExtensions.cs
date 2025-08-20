@@ -1,11 +1,11 @@
 ﻿using AspNetCore.Authentication.Basic;
-using HGT.EAM.WebServices.Infraestructure.Architecture.Models;
+using HGT.EAM.WebServices.Infrastructure.Architecture.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
 
-namespace HGT.EAM.WebServices.Infraestructure.Architecture.Extensions;
+namespace HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 
 public static class AuthorizationExtensions
 {
@@ -24,17 +24,18 @@ public static class AuthorizationExtensions
 
         List<EAMCredentialsSettings> allCredentials = configuration.GetSection("EAMCredentials").Get<List<EAMCredentialsSettings>>();
 
-        if (allCredentials.Count == 0)
+        if (allCredentials?.Count == 0)
             throw new InvalidOperationException("EAMCredentials configuration section is empty.");
 
         services.AddAuthentication(BasicDefaults.AuthenticationScheme)
             .AddBasic(options =>
             {
+                options.Realm = "EAM-Webservices";
                 options.Events = new BasicEvents
                 {
                     OnValidateCredentials = async context =>
                     {
-                        var userInfoEAM = allCredentials.FirstOrDefault(f => f.Username == context.Username && f.Password == context.Password);
+                        var userInfoEAM = allCredentials?.FirstOrDefault(f => f.Username == context.Username && f.Password == context.Password);
 
                         if (userInfoEAM != null)
                         {
@@ -51,7 +52,7 @@ public static class AuthorizationExtensions
                         }
                         else
                         {
-                            context.NoResult();  // 401 without WWW-Authenticate header
+                            context.ValidationFailed();
                         }
                     }
                 };

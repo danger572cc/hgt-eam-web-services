@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 
-namespace HGT.EAM.WebServices.Infraestructure.Architecture.Extensions;
+namespace HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 
 public static class OpenApiServiceExtensions
 {
@@ -32,13 +32,17 @@ internal sealed class BasicSecuritySchemeTransformer(
 
             var securitySchemeId = "Basic";
 
-            document.Components.SecuritySchemes.Add(securitySchemeId, new OpenApiSecurityScheme
+            if (!document.Components.SecuritySchemes.ContainsKey(securitySchemeId)) 
             {
-                Type = SecuritySchemeType.Http,
-                Scheme = "basic",
-                In = ParameterLocation.Header,
-                Description = "Basic Authorization header using the Bearer scheme."
-            });
+                document.Components.SecuritySchemes.Add(securitySchemeId, new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "basic",
+                    In = ParameterLocation.Header,
+                    Description = "Basic Authorization header using the Bearer scheme."
+                });
+            }
+
 
             document.SecurityRequirements.Add(new OpenApiSecurityRequirement
             {

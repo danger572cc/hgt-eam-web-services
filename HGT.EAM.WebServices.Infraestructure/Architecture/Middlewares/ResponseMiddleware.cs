@@ -2,7 +2,7 @@
 using System.Text;
 using System.Text.Json;
 
-namespace HGT.EAM.WebServices.Infraestructure.Architecture.Middlewares;
+namespace HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 
 public class ResponseMiddleware(RequestDelegate next)
 {

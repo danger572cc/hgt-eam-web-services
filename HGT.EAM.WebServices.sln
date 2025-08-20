@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HGT.EAM.WebServices", "HGT.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HGT.EAM.WebServices.Conector", "HGT.EAM.WebServices.Conector\HGT.EAM.WebServices.Conector.csproj", "{646B8ECF-4783-48F0-99F6-4B00679B94EC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HGT.EAM.WebServices.Infraestructure", "HGT.EAM.WebServices.Infraestructure\HGT.EAM.WebServices.Infraestructure.csproj", "{AEA2FF8E-42C5-49A9-82B7-C9863896D525}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HGT.EAM.WebServices.Infrastructure", "HGT.EAM.WebServices.Infraestructure\HGT.EAM.WebServices.Infrastructure.csproj", "{AEA2FF8E-42C5-49A9-82B7-C9863896D525}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

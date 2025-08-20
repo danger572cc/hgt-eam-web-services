@@ -1,4 +1,4 @@
-﻿namespace HGT.EAM.WebServices.Infraestructure.Architecture.Exceptions;
+﻿namespace HGT.EAM.WebServices.Infrastructure.Architecture.Exceptions;
 
 [Serializable]
 public class OCTBadRequestException : Exception

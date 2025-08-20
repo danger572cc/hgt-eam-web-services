@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace HGT.EAM.WebServices.Infraestructure.Architecture.Models;
+namespace HGT.EAM.WebServices.Infrastructure.Architecture.Models;
 
 public sealed class EAMCredentialsSettings
 {

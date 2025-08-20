@@ -1,5 +1,5 @@
-﻿using HGT.EAM.WebServices.Infraestructure.Architecture.Extensions;
-using HGT.EAM.WebServices.Infraestructure.Architecture.Middlewares;
+﻿using HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
+using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 using Scalar.AspNetCore;
 using System.Reflection;
 
