@@ -41,7 +41,7 @@ public static class AuthorizationExtensions
                         {
                             var userClaims = new[]
                             {
-                                new Claim(ClaimTypes.NameIdentifier, userInfoEAM.Username),
+                                new Claim(ClaimTypes.Name, userInfoEAM.Username),
                                 new Claim("Organization", userInfoEAM.Organization),
                                 new Claim("Password", userInfoEAM.Password)
                             };

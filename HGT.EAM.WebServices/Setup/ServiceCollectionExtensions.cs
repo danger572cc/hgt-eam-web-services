@@ -1,16 +1,25 @@
-﻿namespace HGT.EAM.WebServices.Setup;
+﻿using HGT.EAM.WebServices.Conector.Architecture.Interfaces;
+using HGT.EAM.WebServices.Conector.Architecture.Services;
+using HGT.EAM.WebServices.Infrastructure.Architecture.Models;
+
+namespace HGT.EAM.WebServices.Setup;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
-        /*services.AddScoped<ISmsService, SmsService>();
-        services.AddSingleton<IEncryptionService, EncryptionService>();
-        services.AddScoped<IDgaApiService, DgaApiService>();
-        services.AddScoped<ITempSessionService, TempSessionService>();
-        services.AddScoped<IImageService, ImageService>();
-        services.AddScoped<IS3Service, S3Service>();
-        services.AddScoped<IBillingStaticDataService, BillingStaticDataService>();*/
+        var gridSettings = configuration.GetSection("EAMGrids");
+
+        if (!gridSettings.Exists())
+            throw new InvalidOperationException("EAMGrids configuration section is missing.");
+
+        List<EAMGridSettings> allGrids = configuration.GetSection("EAMGrids").Get<List<EAMGridSettings>>();
+
+        if (allGrids?.Count == 0)
+            throw new InvalidOperationException("EAMGrids configuration section is empty.");
+
+        services.AddSingleton(allGrids);
+        services.AddScoped<IEAMGridService, EAMGridService>();
         return services;
     }
 }

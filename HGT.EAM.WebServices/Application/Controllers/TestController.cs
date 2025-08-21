@@ -1,13 +1,20 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using HGT.EAM.WebServices.Infrastructure.Architecture.Controller;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HGT.EAM.WebServices.Application.Controllers;
 
-[Tags("Prueba")]
+[Tags("Prueba funcionamiento servicio")]
 [ApiController]
 [Route("api/test")]
-public class TestController : Controller
+public class TestController : HGTController
 {
+    public TestController(IMediator mediator, ILogger<TestController> logger)
+        : base(mediator, logger)
+    {
+    }
+
     [Authorize]
     [HttpGet("private")]
     public IActionResult GetPrivate()
@@ -22,7 +29,6 @@ public class TestController : Controller
     [HttpGet("public")]
     public IActionResult GetPublic()
     {
-        return Ok("This endpoint is open to everyone.");
+        return Ok($"This endpoint is open to everyone. ${DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")}");
     }
-
 }

@@ -18,8 +18,4 @@
     <ProjectReference Include="..\HGT.EAM.WebServices.Infraestructure\HGT.EAM.WebServices.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Application\Queries\" />
-  </ItemGroup>
-
 </Project>

@@ -10,14 +10,13 @@ public static class GetGridDataOnlyRequestExtensions
         string password, 
         int gridId, 
         string gridName, 
+        string functionName,
         int dataSpyId,
         int cursorPosition = 0,
         int numberOfRows = 2000) 
     {
         var authentication = new UsernameToken()
         {
-            /*Username = new Username { Value = "INTEGRATPG@EAMQA" },
-            Password = new Password { Value = "Visualk1*" }*/
             Username = new Username { Value = username },
             Password = new Password { Value = password }
         };
@@ -40,9 +39,11 @@ public static class GetGridDataOnlyRequestExtensions
                     GRID = new GRID { 
                         GRID_ID = gridId.ToString(), 
                         GRID_NAME = gridName, 
-                        USER_FUNCTION_NAME = gridName,
+                        USER_FUNCTION_NAME = functionName,
                         CURSOR_POSITION = cursorPosition.ToString(),
-                        NUMBER_OF_ROWS_FIRST_RETURNED = numberOfRows.ToString() 
+                        NUMBER_OF_ROWS_FIRST_RETURNED = numberOfRows.ToString(),
+                        LOCALIZE_RESULT = "true",
+                        RESULT_IN_SAXORDER = "true"
                     }
                 }
             }

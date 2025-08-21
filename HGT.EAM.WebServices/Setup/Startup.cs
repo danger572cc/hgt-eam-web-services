@@ -32,7 +32,7 @@ public class Startup(IConfiguration configuration)
             .UseMiddleware<ResponseMiddleware>();
     }
 
-    public void ConfigureServices(IServiceCollection services)
+    public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddCors(options =>
         {
@@ -52,7 +52,8 @@ public class Startup(IConfiguration configuration)
         });
         services.AddControllers();
         //services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-        services.AddConfigOpenApi();
+        services.AddApplicationServices(configuration);
+        services.AddConfigOpenApi(configuration);
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());

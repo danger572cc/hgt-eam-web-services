@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.OpenApi;
+﻿using Microsoft.AspNetCore.OpenApi;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 
@@ -7,13 +7,20 @@ namespace HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 
 public static class OpenApiServiceExtensions
 {
-    public static IServiceCollection AddConfigOpenApi(this IServiceCollection services)
+    public static IServiceCollection AddConfigOpenApi(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddOpenApi("v1", options =>
+        var enableSchemeAuthScalar = !configuration.GetSection("EnableAuthScheme").Exists() ? false : configuration.GetSection("EnableAuthScheme").Get<bool>();
+        if (!enableSchemeAuthScalar)
         {
-            options.AddDocumentTransformer<BasicSecuritySchemeTransformer>();
-        });
-
+            services.AddOpenApi("v1");
+        }
+        else 
+        {
+            services.AddOpenApi("v1", options =>
+            {
+                options.AddDocumentTransformer<BasicSecuritySchemeTransformer>();
+            });
+        }
         return services;
     }
 }
@@ -39,22 +46,23 @@ internal sealed class BasicSecuritySchemeTransformer(
                     Type = SecuritySchemeType.Http,
                     Scheme = "basic",
                     In = ParameterLocation.Header,
-                    Description = "Basic Authorization header using the Bearer scheme."
+                    Description = "Basic Authorization header using the Bearer scheme.",
                 });
-            }
-
+             }
 
             document.SecurityRequirements.Add(new OpenApiSecurityRequirement
             {
-                [new OpenApiSecurityScheme
-                {
-                    Reference =
-                        new OpenApiReference
-                        {
-                            Id = securitySchemeId,
-                            Type = ReferenceType.SecurityScheme
-                        }
-                }] = Array.Empty<string>()
+                [
+                       new OpenApiSecurityScheme
+                       {
+                           Reference =
+                           new OpenApiReference
+                           {
+                               Id = securitySchemeId,
+                               Type = ReferenceType.SecurityScheme
+                           }
+                       }
+                    ] = Array.Empty<string>()
             });
         }
     }
