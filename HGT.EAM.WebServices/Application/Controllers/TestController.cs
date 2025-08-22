@@ -1,5 +1,5 @@
 ﻿using HGT.EAM.WebServices.Infrastructure.Architecture.Controller;
-using MediatR;
+using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

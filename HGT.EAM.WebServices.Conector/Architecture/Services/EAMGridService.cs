@@ -22,6 +22,7 @@ public class EAMGridService : IEAMGridService
             throw new InvalidOperationException("EAMBaseUrl configuration is not configured.");
         var binding = new BasicHttpBinding();
         binding.Security.Mode = BasicHttpSecurityMode.Transport;
+        binding.MaxReceivedMessageSize = 10000000;
         var endpointAddress = new EndpointAddress(url);
         _gridService = new GetGridDataOnlyPTClient(binding, endpointAddress);
         _logger = logger;
@@ -29,9 +30,9 @@ public class EAMGridService : IEAMGridService
 
     public async Task<GetGridDataOnlyResponseMsg> GetGridInfoAsync(GetGridDataOnlyRequestMsg request)
     {
-        _logger.LogTrace($"Request trace: {Environment.NewLine} {request.GetStringXML()}");
+        _logger.LogInformation($"Request trace: {Environment.NewLine} {request.GetStringXML()}");
         var response = await _gridService.GetGridDataOnlyOpAsync(request.Organization, request.Security, null, null, null, null, request.MP0116_GetGridDataOnly_001);
-        _logger.LogTrace($"Response trace: {Environment.NewLine} {response.GetStringXML()}");
+        _logger.LogInformation($"Response trace: {Environment.NewLine} {response.GetStringXML()}");
         return response;
     }
 }

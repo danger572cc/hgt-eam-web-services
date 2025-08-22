@@ -14,7 +14,7 @@ public class GridDataOnlyGetQueryHandler : IQueryHandler<GridDataOnlyGetQuery, M
         _gridEAMService = gridEAMService;
     }
 
-    public async Task<MP0116_GetGridDataOnly_001_Result> Handle(GridDataOnlyGetQuery command, CancellationToken cancellationToken)
+    public async ValueTask<MP0116_GetGridDataOnly_001_Result> Handle(GridDataOnlyGetQuery command, CancellationToken cancellationToken)
     {
         var request = GetGridDataOnlyRequestExtensions.GetObject(command.Organization, command.Username, command.Password, command.GridId, command.GridName, command.FunctionName, command.DataspyId, 0, command.NumberOfRowsFirstReturned);
         var response = await _gridEAMService.GetGridInfoAsync(request);

@@ -1,4 +1,4 @@
-﻿using MediatR;
+﻿using Mediator;
 
 namespace HGT.EAM.WebServices.Infrastructure.Architecture.Query;
 

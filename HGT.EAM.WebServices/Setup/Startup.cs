@@ -1,6 +1,8 @@
 ﻿using HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
+using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
+using Serilog;
 using System.Reflection;
 
 namespace HGT.EAM.WebServices.Setup;
@@ -22,6 +24,7 @@ public class Startup(IConfiguration configuration)
             app.UseExceptionHandler("/error");
             app.UseHsts();
         }*/
+        app.UseSerilogRequestLogging();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapOpenApi();
@@ -54,9 +57,15 @@ public class Startup(IConfiguration configuration)
         //services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
         services.AddApplicationServices(configuration);
         services.AddConfigOpenApi(configuration);
-        services.AddMediatR(cfg =>
+        /*services.AddMediator(cfg =>
         {
-            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+            cfg.Assemblies = [Assembly.GetExecutingAssembly()];
+        });*/
+        services.AddMediator((Mediator.MediatorOptions options) =>
+        {
+            options.ServiceLifetime = ServiceLifetime.Singleton;
+            options.GenerateTypesAsInternal = true;
+            options.Assemblies = [Assembly.GetExecutingAssembly()];
         });
         services.AddMemoryCache();
     }

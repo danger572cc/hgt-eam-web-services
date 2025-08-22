@@ -3,7 +3,7 @@ using HGT.EAM.WebServices.Application.Queries;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Controller;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Enums;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Models;
-using MediatR;
+using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;

@@ -35,7 +35,7 @@ public static class GetGridDataOnlyRequestExtensions
                 FUNCTION_REQUEST_INFO = new FUNCTION_REQUEST_INFO() 
                 {
                     DATASPY = new DATASPY { DATASPY_ID = dataSpyId.ToString() },
-                    GRID_TYPE = new GRID_TYPE { TYPE = GRID_TYPE_type.LIST },
+                    GRID_TYPE = new GRID_TYPE { TYPE = GRID_TYPE_type.LIST, TYPESpecified = true },
                     GRID = new GRID { 
                         GRID_ID = gridId.ToString(), 
                         GRID_NAME = gridName, 
@@ -44,7 +44,9 @@ public static class GetGridDataOnlyRequestExtensions
                         NUMBER_OF_ROWS_FIRST_RETURNED = numberOfRows.ToString(),
                         LOCALIZE_RESULT = "true",
                         RESULT_IN_SAXORDER = "true"
-                    }
+                    },
+                    REQUEST_TYPE = FUNCTION_REQUEST_TYPE.LISTDATA_ONLYSTORED,
+                    REQUEST_TYPESpecified = true
                 }
             }
         };
