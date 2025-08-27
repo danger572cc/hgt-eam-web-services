@@ -62188,7 +62188,10 @@ namespace EAM.WebServices
         
         /// <remarks/>
         DEPENDENT,
-        
+
+        /// <remarks/>
+        BIGINT,
+
         /// <remarks/>
         CLOB,
     }

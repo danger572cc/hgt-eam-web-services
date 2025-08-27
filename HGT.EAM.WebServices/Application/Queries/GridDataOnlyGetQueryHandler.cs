@@ -25,12 +25,13 @@ public class GridDataOnlyGetQueryHandler : IQueryHandler<GridDataOnlyGetQuery, R
         var request = GetGridDataOnlyRequestExtensions.GetObject(command.Organization, command.Username, command.Password, command.GridId, command.GridName, command.FunctionName, command.DataspyId, page, command.NumberOfRowsFirstReturned);
         var response = await _gridEAMService.GetGridInfoAsync(request);
         var fields = _mapper.Map<List<Field>>(response.Item2);
-        var rows = response.Item3.GRID.DATA.Items.ConvertToType<List<DATAROW>>().GetDTORows(fields);
+        var rows = response.Item3.GRID.DATA != null ? response.Item3.GRID.DATA.Items.ConvertToType<List<DATAROW>>().GetDTORows(fields) : [];
         var responseDTO = new ResultDataGridModel 
         {
             TotalRecords = response.Item1,
             TotalPages = (int)Math.Ceiling((double)response.Item1 / command.NumberOfRowsFirstReturned),
             CurrentPage = page,
+            TotalRecordsReturned = rows.Count,
             DataRecord = new DataRecord 
             {
                 Fields = fields,
