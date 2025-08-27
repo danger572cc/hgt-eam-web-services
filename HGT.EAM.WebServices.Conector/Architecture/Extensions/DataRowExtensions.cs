@@ -1,0 +1,27 @@
+﻿using EAM.WebServices;
+using HGT.EAM.WebServices.Conector.Architecture.Models;
+
+namespace HGT.EAM.WebServices.Conector.Architecture.Extensions;
+
+public static class DataRowExtensions
+{
+    public static List<Dictionary<string, object>> GetDTORows(this List<DATAROW> records, List<Field> fields) 
+    {
+        var recordsDTO = new List<Dictionary<string, object>>();
+        foreach (var record in records) 
+        {
+            var recordDTO = new Dictionary<string, object>();
+            var rows = record.D;
+            foreach (var row in rows)
+            {
+                var currentId = Convert.ToInt32(row.n);
+                var field = fields.FirstOrDefault(filter => filter.Id == currentId);
+                var value = row.Text != null && row.Text.Length > 0 ? row.Text[0] : null;
+                recordDTO.Add(field.Name, value);
+            }
+            recordsDTO.Add(recordDTO.Keys.ToDictionary(_ => _, _ => recordDTO[_]));
+            recordDTO.Clear();
+        }
+        return recordsDTO;
+    }
+}

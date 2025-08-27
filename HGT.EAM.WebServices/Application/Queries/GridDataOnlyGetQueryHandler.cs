@@ -1,23 +1,42 @@
 ﻿using EAM.WebServices;
 using HGT.EAM.WebServices.Conector.Architecture.Extensions;
 using HGT.EAM.WebServices.Conector.Architecture.Interfaces;
+using HGT.EAM.WebServices.Conector.Architecture.Models;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Query;
+using MapsterMapper;
 
 namespace HGT.EAM.WebServices.Application.Queries;
 
-public class GridDataOnlyGetQueryHandler : IQueryHandler<GridDataOnlyGetQuery, MP0116_GetGridDataOnly_001_Result>
+public class GridDataOnlyGetQueryHandler : IQueryHandler<GridDataOnlyGetQuery, ResultDataGridModel>
 {
+    private readonly IMapper _mapper;
+
     private readonly IEAMGridService _gridEAMService;
 
-    public GridDataOnlyGetQueryHandler(IEAMGridService gridEAMService)
+    public GridDataOnlyGetQueryHandler(IMapper mapper, IEAMGridService gridEAMService)
     {
         _gridEAMService = gridEAMService;
+        _mapper = mapper;
     }
 
-    public async ValueTask<MP0116_GetGridDataOnly_001_Result> Handle(GridDataOnlyGetQuery command, CancellationToken cancellationToken)
+    public async ValueTask<ResultDataGridModel> Handle(GridDataOnlyGetQuery command, CancellationToken cancellationToken)
     {
-        var request = GetGridDataOnlyRequestExtensions.GetObject(command.Organization, command.Username, command.Password, command.GridId, command.GridName, command.FunctionName, command.DataspyId, 0, command.NumberOfRowsFirstReturned);
+        int page = command.Page > 0 ? (command.NumberOfRowsFirstReturned * (command.Page - 1)) + 1 : 0;
+        var request = GetGridDataOnlyRequestExtensions.GetObject(command.Organization, command.Username, command.Password, command.GridId, command.GridName, command.FunctionName, command.DataspyId, page, command.NumberOfRowsFirstReturned);
         var response = await _gridEAMService.GetGridInfoAsync(request);
-        return response.MP0116_GetGridDataOnly_001_Result;
+        var fields = _mapper.Map<List<Field>>(response.Item2);
+        var rows = response.Item3.GRID.DATA.Items.ConvertToType<List<DATAROW>>().GetDTORows(fields);
+        var responseDTO = new ResultDataGridModel 
+        {
+            TotalRecords = response.Item1,
+            TotalPages = (int)Math.Ceiling((double)response.Item1 / command.NumberOfRowsFirstReturned),
+            CurrentPage = page,
+            DataRecord = new DataRecord 
+            {
+                Fields = fields,
+                Rows = rows
+            }
+        };
+        return responseDTO;
     }
 }

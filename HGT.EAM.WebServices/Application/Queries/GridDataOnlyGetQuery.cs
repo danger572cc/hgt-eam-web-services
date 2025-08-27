@@ -1,11 +1,11 @@
-﻿using EAM.WebServices;
+﻿using HGT.EAM.WebServices.Conector.Architecture.Models;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Query;
 using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GridEnums;
 using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GriTypeEnums;
 
 namespace HGT.EAM.WebServices.Application.Queries;
 
-public class GridDataOnlyGetQuery : IQuery<MP0116_GetGridDataOnly_001_Result>
+public class GridDataOnlyGetQuery : IQuery<ResultDataGridModel>
 {
     public required string Organization { get; set; } = string.Empty;
 
@@ -20,6 +20,8 @@ public class GridDataOnlyGetQuery : IQuery<MP0116_GetGridDataOnly_001_Result>
     public required int DataspyId { get; set; }
 
     public required int GridId { get; set; }
+
+    public required int Page { get; set; }
 
     public required int NumberOfRowsFirstReturned { get; set; }
 

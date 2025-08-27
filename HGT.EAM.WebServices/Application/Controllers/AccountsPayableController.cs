@@ -1,11 +1,13 @@
 ﻿using EAM.WebServices;
 using HGT.EAM.WebServices.Application.Queries;
+using HGT.EAM.WebServices.Conector.Architecture.Models;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Controller;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Enums;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Models;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel;
 using System.Net;
 using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.ApiFilterEnums;
 
@@ -15,13 +17,15 @@ namespace HGT.EAM.WebServices.Application.Controllers;
 [Tags("Cuentas por pagar")]
 [ApiController]
 [Route("api/accounts-payable")]
+[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
 public class AccountsPayableController : HGTController
 {
     private readonly List<EAMGridSettings> _gridSettings;
 
     public AccountsPayableController(
         IMediator mediator, 
-        ILogger<TestController> logger,
+        ILogger<AccountsPayableController> logger,
         List<EAMGridSettings> gridSettings
         )
         : base(mediator, logger)
@@ -29,15 +33,20 @@ public class AccountsPayableController : HGTController
         _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == Infrastructure.Architecture.Enums.GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar);
     }
 
-    /// <summary>Lista de comprobantes de factura de Ecuador.</summary>
-    /// <param name="typeFilter">Filtro para e</param>
     [HttpGet("invoice/vouchers/ecuador")]
+    [EndpointSummary("Lista de comprobantes de factura de Ecuador.")]
+    [EndpointDescription("Representa la grilla Comprobantes de factura Ecuador")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetInvoiceReceiptsEcuadorAsync(
-        [FromQuery] ApiRequestEnum typeFilter, CancellationToken cancellationToken)
+        [FromQuery]
+        [Description("Tipo de filtro: 1 = dias, 2 = Mes, 3 = Año")]
+        ApiRequestEnum typeFilter,
+        CancellationToken cancellationToken,
+        [FromQuery]
+        [Description("Número de página, se inicia con 0")]
+        int page = 1)
     {
-        var gridInvoiceVocherSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == Infrastructure.Architecture.Enums.GridEnums.HGTGridEnum.ListaComprobantesFacturaEcuador);
+        var gridInvoiceVocherSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.ListaComprobantesFacturaEcuador);
         var query = new GridDataOnlyGetQuery
         {
             Username = User.Identity.Name,
@@ -46,6 +55,7 @@ public class AccountsPayableController : HGTController
             FunctionName = gridInvoiceVocherSettings.UserFunction,
             GridName = gridInvoiceVocherSettings.GridName,
             GridId = gridInvoiceVocherSettings.GridId,
+            Page = page,
             NumberOfRowsFirstReturned = gridInvoiceVocherSettings.NumberRecordsFirstReturned,
             DataspyId = typeFilter switch
             {
@@ -57,6 +67,6 @@ public class AccountsPayableController : HGTController
             GridHGT = GridEnums.HGTGridEnum.ListaComprobantesFacturaEcuador,
             GridTypeHGT = GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar
         };
-        return await ExecuteHandler<GridDataOnlyGetQuery, MP0116_GetGridDataOnly_001_Result>(query, HttpStatusCode.OK, cancellationToken);
+        return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 }

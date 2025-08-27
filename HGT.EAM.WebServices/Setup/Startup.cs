@@ -1,5 +1,7 @@
-﻿using HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
+﻿using HGT.EAM.WebServices.Application.Mapper;
+using HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
+using Mapster;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 using Serilog;
@@ -57,10 +59,8 @@ public class Startup(IConfiguration configuration)
         //services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
         services.AddApplicationServices(configuration);
         services.AddConfigOpenApi(configuration);
-        /*services.AddMediator(cfg =>
-        {
-            cfg.Assemblies = [Assembly.GetExecutingAssembly()];
-        });*/
+        services.AddMapster();
+        MapsterConfig.Configure();
         services.AddMediator((Mediator.MediatorOptions options) =>
         {
             options.ServiceLifetime = ServiceLifetime.Singleton;
