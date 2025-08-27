@@ -1,7 +1,6 @@
 ﻿using EAM.WebServices;
 using HGT.EAM.WebServices.Conector.Architecture.Models;
 using Mapster;
-using Microsoft.AspNetCore.Mvc.ViewEngines;
 
 namespace HGT.EAM.WebServices.Application.Mapper;
 
@@ -13,9 +12,9 @@ public static class MapsterConfig
             .Map(dest => dest.Id, src => Convert.ToInt32(src.aliasnum))
             .Map(dest => dest.Label, src => src.label)
             .Map(dest => dest.Name, src => src.name)
-            .Map(dest => dest.Order, src => Convert.ToInt32(src.order))
+            .Map(dest => dest.Order, src => !string.IsNullOrEmpty(src.order) ? Convert.ToInt32(src.order) : 0)
             .Map(dest => dest.Type, src => src.type)
-            .Map(dest => dest.Visible, src => src.visible == "+")
-            .Map(dest => dest.Width, src => src.width);
+            .Map(dest => dest.Visible, src => !string.IsNullOrEmpty(src.visible) && src.visible == "+")
+            .Map(dest => dest.Width, src => !string.IsNullOrEmpty(src.width) ? Convert.ToInt32(src.width) : 0);
     }
 }

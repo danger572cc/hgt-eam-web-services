@@ -28,7 +28,7 @@ public class ExceptionMiddleware(RequestDelegate next)
         }
 
         int statusCode = 500;
-        string message = "Ha ocurrido un error interno.";
+        string message = $"Ha ocurrido un error interno. Detalles: {ex.Message}";
         object response;
 
         switch (ex)

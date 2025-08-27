@@ -24,4 +24,30 @@ public static class DataRowExtensions
         }
         return recordsDTO;
     }
+
+    public static List<Field> MapFieldsDTO(this List<FIELD> fields)
+    {
+        var fieldsDTO = new List<Field>();
+        foreach (var field in fields)
+        {
+            _ = int.TryParse(field.aliasnum, out int id);
+            var label = string.Empty + field.label;
+            var name = string.Empty + field.name;
+            int order = !string.IsNullOrEmpty(field.order) ? Convert.ToInt32(field.order) : 0;
+            var type = string.Empty + field.type;
+            bool isVisible = !string.IsNullOrEmpty(field.visible) && field.visible == "+";
+            int width = !string.IsNullOrEmpty(field.width) ? Convert.ToInt32(field.width) : 0;
+            fieldsDTO.Add(new Field 
+            {
+                Id = id,
+                Label = label,
+                Name = name,
+                Order = order,
+                Type = type,
+                Visible = isVisible,
+                Width = width,
+            });
+        }
+        return fieldsDTO;
+    }
 }

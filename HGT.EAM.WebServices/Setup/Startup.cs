@@ -2,7 +2,6 @@
 using HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 using Mapster;
-using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 using Serilog;
 using System.Reflection;
@@ -49,14 +48,12 @@ public class Startup(IConfiguration configuration)
             });
             /*options.AddPolicy("HGT", builder =>
             {
-                builder.WithOrigins("https://octocelio.cl", "https://www.octocelio.cl")
-                       .SetIsOriginAllowed(origin => origin.EndsWith(".octocelio.cl"))
+                builder.WithOrigins("https://eamdev.hgtlatam.com/")
                        .AllowAnyMethod()
                        .AllowAnyHeader();
             });*/
         });
         services.AddControllers();
-        //services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
         services.AddApplicationServices(configuration);
         services.AddConfigOpenApi(configuration);
         services.AddMapster();
