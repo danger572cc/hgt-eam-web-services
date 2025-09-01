@@ -5,7 +5,9 @@ public static class GriTypeEnums
     public enum HGTGridTypeEnum 
     {
         Abastecimiento = 1,
-        CuentasPorPagar = 2
+        CuentasPorPagar = 2,
+        ControlGestion = 3,
+        Contabilidad = 4
     }
 }
 
@@ -19,6 +21,10 @@ public static class GridEnums
         VistaFinanzasSC = 4,
         ListaComprobantesFacturaEcuador = 5,
         VistaOrdenesDeCompras = 6,
-        VistaFinanzasFacturación = 7
+        VistaFinanzasFacturacion = 7,
+        GrillaProvisiones = 8,
+        CostosMantenimiento = 9,
+        GrillaTransacciones = 10,
+        Kardex = 11
     }
 }

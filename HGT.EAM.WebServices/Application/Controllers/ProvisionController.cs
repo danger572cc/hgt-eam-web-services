@@ -13,7 +13,7 @@ using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.ApiFilterEnum
 namespace HGT.EAM.WebServices.Application.Controllers;
 
 [Authorize]
-[Tags("Abanstecimiento")]
+[Tags("Abastecimiento")]
 [ApiController]
 [Route("api/provisions")]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -24,7 +24,7 @@ public class ProvisionController : HGTController
 
     public ProvisionController(
         IMediator mediator,
-        ILogger<AccountsPayableController> logger,
+        ILogger<ProvisionController> logger,
         List<EAMGridSettings> gridSettings
         )
         : base(mediator, logger)
