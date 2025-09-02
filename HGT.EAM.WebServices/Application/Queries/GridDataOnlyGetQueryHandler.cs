@@ -30,7 +30,7 @@ public class GridDataOnlyGetQueryHandler : IQueryHandler<GridDataOnlyGetQuery, R
         {
             TotalRecords = response.Item1,
             TotalPages = (int)Math.Ceiling((double)response.Item1 / command.NumberOfRowsFirstReturned),
-            CurrentPage = page,
+            CurrentPage = command.Page,
             TotalRecordsReturned = rows.Count,
             DataRecord = new DataRecord 
             {

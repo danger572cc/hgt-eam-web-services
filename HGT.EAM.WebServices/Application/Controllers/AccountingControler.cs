@@ -13,28 +13,28 @@ using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.ApiFilterEnum
 namespace HGT.EAM.WebServices.Application.Controllers;
 
 [Authorize]
-[Tags("Control de gestión")]
+[Tags("Contabilidad")]
 [ApiController]
-[Route("api/management-control")]
+[Route("api/accounting")]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-public class ManagementController : HGTController
+public class AccountingControler : HGTController
 {
     private readonly List<EAMGridSettings> _gridSettings;
 
-    public ManagementController(
+    public AccountingControler(
         IMediator mediator,
-        ILogger<ManagementController> logger,
+        ILogger<AccountingControler> logger,
         List<EAMGridSettings> gridSettings
         )
         : base(mediator, logger)
     {
-        _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == GriTypeEnums.HGTGridTypeEnum.ControlGestion);
+        _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == GriTypeEnums.HGTGridTypeEnum.Contabilidad);
     }
 
-    [HttpGet("provisions")]
-    [EndpointSummary("Grilla de provisiones 2.")]
-    [EndpointDescription("Representa la grilla provisiones 2")]
+    [HttpGet("transactions")]
+    [EndpointSummary("Grilla de transacciones")]
+    [EndpointDescription("Representa la grilla transacciones")]
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetProvisionsAsync(
         [FromQuery]
@@ -45,7 +45,7 @@ public class ManagementController : HGTController
         [Description("Número de página, se inicia con 1")]
         int page = 1)
     {
-        var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.GrillaProvisiones);
+        var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.GrillaTransacciones);
         var query = new GridDataOnlyGetQuery
         {
             Username = User.Identity.Name,
@@ -64,15 +64,15 @@ public class ManagementController : HGTController
                 ApiRequestEnum.Custom => gridSettings.DataSpyIds.Custom,
                 _ => throw new InvalidOperationException("Invalid filter, accepted values ​​are: 1 = day, 2 = month, 3 = year, 4 = custom."),
             },
-            GridHGT = GridEnums.HGTGridEnum.GrillaProvisiones,
-            GridTypeHGT = GriTypeEnums.HGTGridTypeEnum.ControlGestion
+            GridHGT = GridEnums.HGTGridEnum.GrillaTransacciones,
+            GridTypeHGT = GriTypeEnums.HGTGridTypeEnum.Contabilidad
         };
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 
-    [HttpGet("maintenance/costs")]
+    [HttpGet("kardex")]
     [EndpointSummary("Costos de mantenimiento.")]
-    [EndpointDescription("Representa la grilla Información de Costos Mantenimiento (Resumen)")]
+    [EndpointDescription("Representa la grilla Costos de mantenimiento")]
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMaintenanceCostsAsync(
         [FromQuery]
@@ -83,7 +83,7 @@ public class ManagementController : HGTController
         [Description("Número de página, se inicia con 1")]
         int page = 1)
     {
-        var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.CostosMantenimiento);
+        var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.Kardex);
         var query = new GridDataOnlyGetQuery
         {
             Username = User.Identity.Name,
@@ -102,8 +102,8 @@ public class ManagementController : HGTController
                 ApiRequestEnum.Custom => gridSettings.DataSpyIds.Custom,
                 _ => throw new InvalidOperationException("Invalid filter, accepted values ​​are: 1 = day, 2 = month, 3 = year, 4 = custom."),
             },
-            GridHGT = GridEnums.HGTGridEnum.CostosMantenimiento,
-            GridTypeHGT = GriTypeEnums.HGTGridTypeEnum.ControlGestion
+            GridHGT = GridEnums.HGTGridEnum.Kardex,
+            GridTypeHGT = GriTypeEnums.HGTGridTypeEnum.Contabilidad
         };
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }

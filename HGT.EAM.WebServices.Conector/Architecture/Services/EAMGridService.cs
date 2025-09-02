@@ -4,7 +4,9 @@ using HGT.EAM.WebServices.Conector.Architecture.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
+using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel;
+using System.ServiceModel.Security;
 
 namespace HGT.EAM.WebServices.Conector.Architecture.Services;
 
@@ -27,8 +29,20 @@ public class EAMGridService : IEAMGridService
         binding.Security.Mode = BasicHttpSecurityMode.Transport;
         binding.MaxReceivedMessageSize = 10000000;
         binding.SendTimeout = new TimeSpan(0, 10, 0);
+        binding.Security.Transport = new HttpTransportSecurity { 
+            ClientCredentialType = HttpClientCredentialType.None,
+            ProxyCredentialType = HttpProxyCredentialType.Basic
+        };
         var endpointAddress = new EndpointAddress(url);
         _gridService = new GetGridDataOnlyPTClient(binding, endpointAddress);
+        _gridService.ChannelFactory.Credentials.ServiceCertificate.SslCertificateAuthentication =
+                _gridService.ClientCredentials.ServiceCertificate.SslCertificateAuthentication =
+                    new X509ServiceCertificateAuthentication
+                    {
+                        CertificateValidationMode = X509CertificateValidationMode.None,
+                        RevocationMode = X509RevocationMode.NoCheck,
+                        TrustedStoreLocation = StoreLocation.LocalMachine
+                    };
         _logger = logger;
     }
 

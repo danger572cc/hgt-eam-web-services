@@ -4,6 +4,7 @@ using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 using Mapster;
 using Scalar.AspNetCore;
 using Serilog;
+using System.Drawing;
 using System.Reflection;
 
 namespace HGT.EAM.WebServices.Setup;
@@ -28,8 +29,19 @@ public class Startup(IConfiguration configuration)
         app.UseSerilogRequestLogging();
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseStaticFiles();
         app.MapOpenApi();
-        app.MapScalarApiReference();
+        app.MapScalarApiReference(options =>
+        {
+            options.Title = "HGT Grid API - EAM";
+            options.Layout = ScalarLayout.Modern;
+            options.ShowSidebar = true;
+            options.DarkMode = false;
+            options.HideDarkModeToggle = false;
+            options.DefaultOpenAllTags = true;
+            options.Favicon = "/images/favicon.ico";
+            options.HeadContent = @"<div style='color:white;background-color: #222A36 !important;'><a href='https://www.aep.cl/'><img src='https://www.aep.cl/wp-content/uploads/2025/07/logoHGT-blanco.png' alt='Hanseatic Global Terminals' style='width: 10%;'></a></div>";
+        });
         //app.UseHttpsRedirection();
         app.MapControllers();
         app.UseMiddleware<ExceptionMiddleware>()

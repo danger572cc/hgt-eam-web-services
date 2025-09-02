@@ -12,11 +12,21 @@ public static class OpenApiServiceExtensions
         var enableSchemeAuthScalar = !configuration.GetSection("EnableAuthScheme").Exists() ? false : configuration.GetSection("EnableAuthScheme").Get<bool>();
         if (!enableSchemeAuthScalar)
         {
-            services.AddOpenApi("v1");
+            services.AddOpenApi(options => {
+                options.AddDocumentTransformer((document, context, _) =>
+                {
+                    document.Info = new()
+                    {
+                        Title = configuration.GetSection("ApiTitle").Value,
+                        Description = configuration.GetSection("ApiDescription").Value
+                    };
+                    return Task.CompletedTask;
+                });
+            });
         }
         else 
         {
-            services.AddOpenApi("v1", options =>
+            services.AddOpenApi(options =>
             {
                 options.AddDocumentTransformer<BasicSecuritySchemeTransformer>();
             });
@@ -31,6 +41,12 @@ internal sealed class BasicSecuritySchemeTransformer(
 {
     public async Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
     {
+        var settings = context.ApplicationServices.GetService<IConfiguration>();
+        document.Info = new()
+        {
+            Title = settings?.GetSection("ApiTitle").Value,
+            Description = settings?.GetSection("ApiDescription").Value
+        };
         var authenticationSchemes = await authenticationSchemeProvider.GetAllSchemesAsync();
 
         if (authenticationSchemes.Any(authScheme => authScheme.Name == "Basic"))
@@ -53,16 +69,16 @@ internal sealed class BasicSecuritySchemeTransformer(
             document.SecurityRequirements.Add(new OpenApiSecurityRequirement
             {
                 [
-                       new OpenApiSecurityScheme
-                       {
-                           Reference =
-                           new OpenApiReference
-                           {
-                               Id = securitySchemeId,
-                               Type = ReferenceType.SecurityScheme
-                           }
-                       }
-                    ] = Array.Empty<string>()
+                    new OpenApiSecurityScheme
+                    {
+                        Reference =
+                        new OpenApiReference
+                        {
+                            Id = securitySchemeId,
+                            Type = ReferenceType.SecurityScheme
+                        }
+                    }
+                ] = Array.Empty<string>()
             });
         }
     }

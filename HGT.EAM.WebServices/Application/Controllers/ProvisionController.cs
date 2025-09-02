@@ -38,7 +38,7 @@ public class ProvisionController : HGTController
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetInfoContractsAsync(
         [FromQuery]
-        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes anterior, 3 = Año anterior o últimos 12 meses")]
+        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes actual, 3 = Año anterior o últimos 12 meses")]
         ApiRequestEnum typeFilter,
         CancellationToken cancellationToken,
         [FromQuery]
@@ -76,7 +76,7 @@ public class ProvisionController : HGTController
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetInvoiceReceiptsEcuadorAsync(
         [FromQuery]
-        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes anterior, 3 = Año anterior o últimos 12 meses")]
+        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes actual, 3 = Año anterior o últimos 12 meses")]
         ApiRequestEnum typeFilter,
         CancellationToken cancellationToken,
         [FromQuery]
@@ -114,7 +114,7 @@ public class ProvisionController : HGTController
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPurchaseOrderAsync(
         [FromQuery]
-        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes anterior, 3 = Año anterior o últimos 12 meses")]
+        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes actual, 3 = Año anterior o últimos 12 meses")]
         ApiRequestEnum typeFilter,
         CancellationToken cancellationToken,
         [FromQuery]
@@ -152,7 +152,7 @@ public class ProvisionController : HGTController
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPurchaseRequestAsync(
     [FromQuery]
-        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes anterior, 3 = Año anterior o últimos 12 meses")]
+        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes actual, 3 = Año anterior o últimos 12 meses")]
         ApiRequestEnum typeFilter,
         CancellationToken cancellationToken,
         [FromQuery]
