@@ -33,10 +33,10 @@ public class AccountingControler : HGTController
     }
 
     [HttpGet("transactions")]
-    [EndpointSummary("Grilla de transacciones")]
+    [EndpointSummary("Grilla de transacciones.")]
     [EndpointDescription("Representa la grilla transacciones")]
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetProvisionsAsync(
+    public async Task<IActionResult> GetTransactionsAsync(
         [FromQuery]
         [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes actual, 3 = Año anterior o últimos 12 meses")]
         ApiRequestEnum typeFilter,
@@ -71,10 +71,10 @@ public class AccountingControler : HGTController
     }
 
     [HttpGet("kardex")]
-    [EndpointSummary("Costos de mantenimiento.")]
-    [EndpointDescription("Representa la grilla Costos de mantenimiento")]
+    [EndpointSummary("Informe de Kardex.")]
+    [EndpointDescription("Representa al informe de cognos informe de kardex")]
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetMaintenanceCostsAsync(
+    public async Task<IActionResult> GetKardexAsync(
         [FromQuery]
         [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes actual, 3 = Año anterior o últimos 12 meses")]
         ApiRequestEnum typeFilter,
