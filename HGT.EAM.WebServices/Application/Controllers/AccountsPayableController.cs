@@ -46,7 +46,7 @@ public class AccountsPayableController : HGTController
         int page = 1,
         [FromQuery]
         [Description("Número de registros a obtener.")]
-        int? pagSize = null))
+        int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.ListaComprobantesFacturaEcuador);
         var query = new GridDataOnlyGetQuery
@@ -128,7 +128,7 @@ public class AccountsPayableController : HGTController
         int page = 1,
         [FromQuery]
         [Description("Número de registros a obtener.")]
-        int? pagSize = null))
+        int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.VistaOrdenesDeCompras);
         var query = new GridDataOnlyGetQuery

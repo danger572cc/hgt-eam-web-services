@@ -47,7 +47,7 @@ public class Startup(IConfiguration configuration)
         app.MapControllers();
         app.UseMiddleware<ExceptionMiddleware>()
             .UseMiddleware<ResponseMiddleware>()
-            .UseMiddeware<PagSizeValidationMiddleware>();
+            .UseMiddleware<PagSizeValidationMiddleware>();
     }
 
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
