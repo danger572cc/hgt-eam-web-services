@@ -2,6 +2,7 @@
 using HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 using Mapster;
+using Microsoft.AspNetCore.Builder;
 using Scalar.AspNetCore;
 using Serilog;
 using System.Drawing;
@@ -45,7 +46,8 @@ public class Startup(IConfiguration configuration)
         //app.UseHttpsRedirection();
         app.MapControllers();
         app.UseMiddleware<ExceptionMiddleware>()
-            .UseMiddleware<ResponseMiddleware>();
+            .UseMiddleware<ResponseMiddleware>()
+            .UseMiddeware<PagSizeValidationMiddleware>();
     }
 
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)

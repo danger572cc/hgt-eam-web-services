@@ -43,7 +43,10 @@ public class ManagementController : HGTController
         CancellationToken cancellationToken,
         [FromQuery]
         [Description("Número de página, se inicia con 1")]
-        int page = 1)
+        int page = 1,
+        [FromQuery]
+        [Description("Número de registros a obtener.")]
+        int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.GrillaProvisiones);
         var query = new GridDataOnlyGetQuery
@@ -55,7 +58,7 @@ public class ManagementController : HGTController
             GridName = gridSettings.GridName,
             GridId = gridSettings.GridId,
             Page = page,
-            NumberOfRowsFirstReturned = gridSettings.NumberRecordsFirstReturned,
+            NumberOfRowsFirstReturned = !pagSize.HasValue ? gridSettings.NumberRecordsFirstReturned : pagSize.GetValueOrDefault(),
             DataspyId = typeFilter switch
             {
                 ApiRequestEnum.Day => gridSettings.DataSpyIds.Day,
@@ -81,7 +84,10 @@ public class ManagementController : HGTController
         CancellationToken cancellationToken,
         [FromQuery]
         [Description("Número de página, se inicia con 1")]
-        int page = 1)
+        int page = 1,
+        [FromQuery]
+        [Description("Número de registros a obtener.")]
+        int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.CostosMantenimiento);
         var query = new GridDataOnlyGetQuery

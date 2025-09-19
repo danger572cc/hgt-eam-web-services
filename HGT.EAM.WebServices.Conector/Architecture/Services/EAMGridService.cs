@@ -28,7 +28,7 @@ public class EAMGridService : IEAMGridService
         var binding = new BasicHttpBinding();
         binding.Security.Mode = BasicHttpSecurityMode.Transport;
         binding.MaxReceivedMessageSize = 10000000;
-        binding.SendTimeout = new TimeSpan(0, 10, 0);
+        binding.SendTimeout = new TimeSpan(0, 60, 0);
         binding.Security.Transport = new HttpTransportSecurity { 
             ClientCredentialType = HttpClientCredentialType.None,
             ProxyCredentialType = HttpProxyCredentialType.Basic
