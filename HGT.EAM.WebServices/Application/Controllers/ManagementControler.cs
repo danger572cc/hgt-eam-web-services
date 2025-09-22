@@ -45,7 +45,7 @@ public class ManagementController : HGTController
         [Description("Número de página, se inicia con 1")]
         int page = 1,
         [FromQuery]
-        [Description("Número de registros a obtener.")]
+        [Description("Número de registros a obtener, el máximo permitido son 200")]
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.GrillaProvisiones);
@@ -86,7 +86,7 @@ public class ManagementController : HGTController
         [Description("Número de página, se inicia con 1")]
         int page = 1,
         [FromQuery]
-        [Description("Número de registros a obtener.")]
+        [Description("Número de registros a obtener, el máximo permitido son 200")]
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.CostosMantenimiento);
@@ -99,7 +99,7 @@ public class ManagementController : HGTController
             GridName = gridSettings.GridName,
             GridId = gridSettings.GridId,
             Page = page,
-            NumberOfRowsFirstReturned = gridSettings.NumberRecordsFirstReturned,
+            NumberOfRowsFirstReturned = !pagSize.HasValue ? gridSettings.NumberRecordsFirstReturned : pagSize.GetValueOrDefault(),
             DataspyId = typeFilter switch
             {
                 ApiRequestEnum.Day => gridSettings.DataSpyIds.Day,

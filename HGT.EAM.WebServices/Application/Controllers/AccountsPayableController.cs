@@ -45,7 +45,7 @@ public class AccountsPayableController : HGTController
         [Description("Número de página, se inicia con 1")]
         int page = 1,
         [FromQuery]
-        [Description("Número de registros a obtener.")]
+        [Description("Número de registros a obtener, el máximo permitido son 200")]
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.ListaComprobantesFacturaEcuador);
@@ -86,7 +86,7 @@ public class AccountsPayableController : HGTController
         [Description("Número de página, se inicia con 1")]
         int page = 1,
         [FromQuery]
-        [Description("Número de registros a obtener.")]
+        [Description("Número de registros a obtener, el máximo permitido son 200")]
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.VistaFinanzasFacturacion);
@@ -127,7 +127,7 @@ public class AccountsPayableController : HGTController
         [Description("Número de página, se inicia con 1")]
         int page = 1,
         [FromQuery]
-        [Description("Número de registros a obtener.")]
+        [Description("Número de registros a obtener, el máximo permitido son 200")]
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.VistaOrdenesDeCompras);

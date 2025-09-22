@@ -13,14 +13,14 @@ public class PagSizeValidationMiddleware(RequestDelegate next)
             if (!int.TryParse(pageValues, out int pageNumber) || pageNumber <= 0)
             {
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync("Invalid 'pageSize' query parameter. It must be a positive integer.");
+                await context.Response.WriteAsync("Invalid 'pagSize' query parameter. It must be a positive integer.");
                 return;
             }
 
             if (pageNumber > 200) 
             {
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync("Invalid 'pageSize' query parameter. It must be less or equal than 200 records.");
+                await context.Response.WriteAsync("Invalid 'pagSize' query parameter. It must be less or equal than 200 records.");
                 return;
             }
         }

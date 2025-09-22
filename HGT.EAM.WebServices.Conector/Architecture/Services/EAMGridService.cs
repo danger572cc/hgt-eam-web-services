@@ -28,7 +28,7 @@ public class EAMGridService : IEAMGridService
         var binding = new BasicHttpBinding();
         binding.Security.Mode = BasicHttpSecurityMode.Transport;
         binding.MaxReceivedMessageSize = 10000000;
-        binding.SendTimeout = new TimeSpan(0, 60, 0);
+        binding.SendTimeout = new TimeSpan(5, 0, 0);
         binding.Security.Transport = new HttpTransportSecurity { 
             ClientCredentialType = HttpClientCredentialType.None,
             ProxyCredentialType = HttpProxyCredentialType.Basic
@@ -57,7 +57,7 @@ public class EAMGridService : IEAMGridService
         var response = await _gridService.GetGridDataOnlyOpAsync(request.Organization, request.Security, null, null, null, null, request.MP0116_GetGridDataOnly_001);
         _logger.LogInformation($"Response trace: {Environment.NewLine} {response.GetStringXML()}");
         //resultados
-        var culture = CultureInfo.GetCultureInfo("es-ES");
+        var culture = CultureInfo.GetCultureInfo("en-US");
         int.TryParse(countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.TOTALCOUNT, NumberStyles.AllowThousands, culture, out int totalRows);
         var fields = countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.FIELDS.FIELD?.ToList();
         var rows = response.MP0116_GetGridDataOnly_001_Result.GRIDRESULT;
