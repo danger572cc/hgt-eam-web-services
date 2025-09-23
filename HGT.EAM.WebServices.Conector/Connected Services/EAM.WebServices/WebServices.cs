@@ -62179,7 +62179,10 @@ namespace EAM.WebServices
         
         /// <remarks/>
         DATETIME,
-        
+
+        /// <remarks/>
+        DATETIME2,
+
         /// <remarks/>
         CHKBOOLEAN,
         
