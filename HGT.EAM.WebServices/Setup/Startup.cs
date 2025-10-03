@@ -2,10 +2,8 @@
 using HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 using Mapster;
-using Microsoft.AspNetCore.Builder;
 using Scalar.AspNetCore;
 using Serilog;
-using System.Drawing;
 using System.Reflection;
 
 namespace HGT.EAM.WebServices.Setup;
@@ -47,7 +45,8 @@ public class Startup(IConfiguration configuration)
         app.MapControllers();
         app.UseMiddleware<ExceptionMiddleware>()
             .UseMiddleware<ResponseMiddleware>()
-            .UseMiddleware<PagSizeValidationMiddleware>();
+            .UseMiddleware<QueryParamsValidationMiddleware>();
+        app.UseResponseCaching();
     }
 
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
@@ -79,5 +78,6 @@ public class Startup(IConfiguration configuration)
             options.Assemblies = [Assembly.GetExecutingAssembly()];
         });
         services.AddMemoryCache();
+        services.AddResponseCaching();
     }
 }

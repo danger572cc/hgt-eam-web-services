@@ -1,4 +1,5 @@
 ﻿using EAM.WebServices;
+using System.Security.Claims;
 
 namespace HGT.EAM.WebServices.Conector.Architecture.Interfaces;
 

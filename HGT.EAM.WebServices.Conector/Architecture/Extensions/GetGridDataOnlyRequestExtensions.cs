@@ -12,8 +12,10 @@ public static class GetGridDataOnlyRequestExtensions
         string gridName, 
         string functionName,
         int dataSpyId,
+        List<DateTime> dateRanges,
+        string fieldFilter = "",
         int cursorPosition = 0,
-        int numberOfRows = 2000) 
+        int numberOfRows = 500) 
     {
         var authentication = new UsernameToken()
         {
@@ -46,10 +48,43 @@ public static class GetGridDataOnlyRequestExtensions
                         RESULT_IN_SAXORDER = "true"
                     },
                     REQUEST_TYPE = FUNCTION_REQUEST_TYPE.LISTDATA_ONLYSTORED,
-                    REQUEST_TYPESpecified = true
+                    REQUEST_TYPESpecified = true,
                 }
             }
         };
+        //filtro por rango
+        if (!string.IsNullOrEmpty(fieldFilter) && dateRanges?.Count > 0) 
+        {
+            var customFilters = new List<MULTIADDON_FILTERSMADDON_FILTER>
+            {
+                new MULTIADDON_FILTERSMADDON_FILTER
+                {
+                    ALIAS_NAME = fieldFilter,
+                    OPERATOR = OPERATOR_TYPE.Item4,
+                    OPERATORSpecified = true,
+                    VALUE = dateRanges[0].ToString("MM/dd/yyyy HH:mm"),
+                    JOINERSpecified = true,
+                    JOINER = AND_OR.AND,
+                    SEQNUM = "1"
+                },
+                new MULTIADDON_FILTERSMADDON_FILTER
+                {
+                    ALIAS_NAME = fieldFilter,
+                    OPERATOR = OPERATOR_TYPE.Item7,
+                    OPERATORSpecified = true,
+                    VALUE = dateRanges[1].ToString("MM/dd/yyyy HH:mm"),
+                    JOINERSpecified = false,
+                    SEQNUM = "2"
+                }
+            };
+            request.MP0116_GetGridDataOnly_001.FUNCTION_REQUEST_INFO.MULTIADDON_FILTERS = [.. customFilters];
+            request.MP0116_GetGridDataOnly_001.FUNCTION_REQUEST_INFO.ADDON_SORT = new ADDON_SORT 
+            {
+                ALIAS_NAME = fieldFilter,
+                TYPE = SORT_TYPE.ASC,
+                TYPESpecified = true
+            };
+        }
         return request;
     }
 }

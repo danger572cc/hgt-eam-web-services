@@ -32,15 +32,22 @@ public class AccountsPayableController : HGTController
         _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == Infrastructure.Architecture.Enums.GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar);
     }
 
+    [ResponseCache(Duration = 900)]
     [HttpGet("invoice/vouchers/ecuador")]
     [EndpointSummary("Lista de comprobantes de factura de Ecuador.")]
     [EndpointDescription("Representa la grilla comprobantes de factura Ecuador")]
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetInvoiceReceiptsEcuadorAsync(
         [FromQuery]
-        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes actual, 3 = Año anterior o últimos 12 meses")]
+        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes anterior, 3 = Mes actual, 4 = Año anterior, 5 = Mes y año en concreto")]
         ApiRequestEnum typeFilter,
         CancellationToken cancellationToken,
+        [FromQuery]
+        [Description("Mes en concreto a buscar, el rango de valores válidos es: 1-12")]
+        int? month = null,
+        [FromQuery]
+        [Description("Año en concreto, valores validos a partir del año anterior")]
+        int? year = null,
         [FromQuery]
         [Description("Número de página, se inicia con 1")]
         int page = 1,
@@ -49,40 +56,27 @@ public class AccountsPayableController : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.ListaComprobantesFacturaEcuador);
-        var query = new GridDataOnlyGetQuery
-        {
-            Username = User.Identity.Name,
-            Password = User.Claims.FirstOrDefault(i => i.Type == "Password")?.Value,
-            Organization = User.Claims.FirstOrDefault(i => i.Type == "Organization")?.Value,
-            FunctionName = gridSettings.UserFunction,
-            GridName = gridSettings.GridName,
-            GridId = gridSettings.GridId,
-            Page = page,
-            NumberOfRowsFirstReturned = !pagSize.HasValue ? gridSettings.NumberRecordsFirstReturned : pagSize.GetValueOrDefault(),
-            DataspyId = typeFilter switch
-            {
-                ApiRequestEnum.Day => gridSettings.DataSpyIds.Day,
-                ApiRequestEnum.Month => gridSettings.DataSpyIds.Month,
-                ApiRequestEnum.Year => gridSettings.DataSpyIds.Year,
-                ApiRequestEnum.Custom => gridSettings.DataSpyIds.Custom,
-                _ => throw new InvalidOperationException("Invalid filter, accepted values ​​are: 1 = day, 2 = month, 3 = year, 4 = custom."),
-            },
-            GridHGT = GridEnums.HGTGridEnum.ListaComprobantesFacturaEcuador,
-            GridTypeHGT = GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar
-        };
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.ListaComprobantesFacturaEcuador, GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 
+    [ResponseCache(Duration = 900)]
     [HttpGet("billing/finance/view")]
     [EndpointSummary("Vista finanzas facturación.")]
     [EndpointDescription("Representa la grilla vista finanzas facturación")]
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetBillingFinanceViewAsync(
-    [FromQuery]
-        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes actual, 3 = Año anterior o últimos 12 meses")]
+        [FromQuery]
+        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes anterior, 3 = Mes actual, 4 = Año anterior, 5 = Mes y año en concreto")]
         ApiRequestEnum typeFilter,
-    CancellationToken cancellationToken,
-    [FromQuery]
+        CancellationToken cancellationToken,
+        [FromQuery]
+        [Description("Mes en concreto a buscar, el rango de valores válidos es: 1-12")]
+        int? month = null,
+        [FromQuery]
+        [Description("Año en concreto, valores validos a partir del año anterior")]
+        int? year = null,
+        [FromQuery]
         [Description("Número de página, se inicia con 1")]
         int page = 1,
         [FromQuery]
@@ -90,39 +84,26 @@ public class AccountsPayableController : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.VistaFinanzasFacturacion);
-        var query = new GridDataOnlyGetQuery
-        {
-            Username = User.Identity.Name,
-            Password = User.Claims.FirstOrDefault(i => i.Type == "Password")?.Value,
-            Organization = User.Claims.FirstOrDefault(i => i.Type == "Organization")?.Value,
-            FunctionName = gridSettings.UserFunction,
-            GridName = gridSettings.GridName,
-            GridId = gridSettings.GridId,
-            Page = page,
-            NumberOfRowsFirstReturned = !pagSize.HasValue ? gridSettings.NumberRecordsFirstReturned : pagSize.GetValueOrDefault(),
-            DataspyId = typeFilter switch
-            {
-                ApiRequestEnum.Day => gridSettings.DataSpyIds.Day,
-                ApiRequestEnum.Month => gridSettings.DataSpyIds.Month,
-                ApiRequestEnum.Year => gridSettings.DataSpyIds.Year,
-                ApiRequestEnum.Custom => gridSettings.DataSpyIds.Custom,
-                _ => throw new InvalidOperationException("Invalid filter, accepted values ​​are: 1 = day, 2 = month, 3 = year, 4 = custom."),
-            },
-            GridHGT = GridEnums.HGTGridEnum.VistaFinanzasFacturacion,
-            GridTypeHGT = GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar
-        };
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.VistaFinanzasFacturacion, GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 
+    [ResponseCache(Duration = 900)]
     [HttpGet("billing/finance/order-purchase")]
     [EndpointSummary("Vista finanzas OC.")]
     [EndpointDescription("Representa la grilla vista finanzas de órdenes de compra")]
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetBillingFinanceOCAsync(
         [FromQuery]
-        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes actual, 3 = Año anterior o últimos 12 meses")]
+        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes anterior, 3 = Mes actual, 4 = Año anterior, 5 = Mes y año en concreto")]
         ApiRequestEnum typeFilter,
         CancellationToken cancellationToken,
+        [FromQuery]
+        [Description("Mes en concreto a buscar, el rango de valores válidos es: 1-12")]
+        int? month = null,
+        [FromQuery]
+        [Description("Año en concreto, valores validos a partir del año anterior")]
+        int? year = null,
         [FromQuery]
         [Description("Número de página, se inicia con 1")]
         int page = 1,
@@ -131,27 +112,7 @@ public class AccountsPayableController : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.VistaOrdenesDeCompras);
-        var query = new GridDataOnlyGetQuery
-        {
-            Username = User.Identity.Name,
-            Password = User.Claims.FirstOrDefault(i => i.Type == "Password")?.Value,
-            Organization = User.Claims.FirstOrDefault(i => i.Type == "Organization")?.Value,
-            FunctionName = gridSettings.UserFunction,
-            GridName = gridSettings.GridName,
-            GridId = gridSettings.GridId,
-            Page = page,
-            NumberOfRowsFirstReturned = !pagSize.HasValue ? gridSettings.NumberRecordsFirstReturned : pagSize.GetValueOrDefault(),
-            DataspyId = typeFilter switch
-            {
-                ApiRequestEnum.Day => gridSettings.DataSpyIds.Day,
-                ApiRequestEnum.Month => gridSettings.DataSpyIds.Month,
-                ApiRequestEnum.Year => gridSettings.DataSpyIds.Year,
-                ApiRequestEnum.Custom => gridSettings.DataSpyIds.Custom,
-                _ => throw new InvalidOperationException("Invalid filter, accepted values ​​are: 1 = day, 2 = month, 3 = year, 4 = custom."),
-            },
-            GridHGT = GridEnums.HGTGridEnum.VistaFinanzasOC,
-            GridTypeHGT = GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar
-        };
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.VistaFinanzasOC, GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 }

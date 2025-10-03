@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel;
 using System.ServiceModel.Security;
+using InvalidOperationException = System.InvalidOperationException;
 
 namespace HGT.EAM.WebServices.Conector.Architecture.Services;
 
@@ -48,12 +49,13 @@ public class EAMGridService : IEAMGridService
 
     public async Task<Tuple<int, List<FIELD>, MP0116_GetGridDataOnly_001_ResultGRIDRESULT>> GetGridInfoAsync(GetGridDataOnlyRequestMsg request)
     {
-        _logger.LogInformation($"Request trace: {Environment.NewLine} {request.GetStringXML()}");
         //total registros y definicion
         request.MP0116_GetGridDataOnly_001.FUNCTION_REQUEST_INFO.REQUEST_TYPE = FUNCTION_REQUEST_TYPE.LISTCOUNTSTORED;
+        _logger.LogInformation($"Request count trace: {Environment.NewLine} {request.GetStringXML()}");
         var countResponse = await _gridService.GetGridDataOnlyOpAsync(request.Organization, request.Security, null, null, null, null, request.MP0116_GetGridDataOnly_001);
         //datos
         request.MP0116_GetGridDataOnly_001.FUNCTION_REQUEST_INFO.REQUEST_TYPE = FUNCTION_REQUEST_TYPE.LISTDATA_ONLYSTORED;
+        _logger.LogInformation($"Request trace: {Environment.NewLine} {request.GetStringXML()}");
         var response = await _gridService.GetGridDataOnlyOpAsync(request.Organization, request.Security, null, null, null, null, request.MP0116_GetGridDataOnly_001);
         _logger.LogInformation($"Response trace: {Environment.NewLine} {response.GetStringXML()}");
         //resultados

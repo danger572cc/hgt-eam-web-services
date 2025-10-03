@@ -21,9 +21,18 @@ public class GridDataOnlyGetQueryHandler : IQueryHandler<GridDataOnlyGetQuery, R
 
     public async ValueTask<ResultDataGridModel> Handle(GridDataOnlyGetQuery command, CancellationToken cancellationToken)
     {
+        var dateRanges = new List<DateTime>();
+        string filterField = string.Empty;
+        if (command.StartDate != null && command.EndDate != null)
+        {
+            dateRanges.Add(command.StartDate.GetValueOrDefault());
+            dateRanges.Add(command.EndDate.GetValueOrDefault());
+            filterField = command.FilterField;
+        }
         int page = command.Page > 0 ? (command.NumberOfRowsFirstReturned * (command.Page - 1)) + 1 : 0;
-        var request = GetGridDataOnlyRequestExtensions.GetObject(command.Organization, command.Username, command.Password, command.GridId, command.GridName, command.FunctionName, command.DataspyId, page, command.NumberOfRowsFirstReturned);
+        var request = GetGridDataOnlyRequestExtensions.GetObject(command.Organization, command.Username, command.Password, command.GridId, command.GridName, command.FunctionName, command.DataspyId, dateRanges, filterField, page, command.NumberOfRowsFirstReturned);
         var response = await _gridEAMService.GetGridInfoAsync(request);
+        
         var fields = _mapper.Map<List<Field>>(response.Item2);
         var rows = response.Item3.GRID.DATA != null ? response.Item3.GRID.DATA.Items.ConvertToType<List<DATAROW>>().GetDTORows(fields) : [];
         var responseDTO = new ResultDataGridModel 

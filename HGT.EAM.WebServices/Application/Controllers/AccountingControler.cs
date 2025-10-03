@@ -18,6 +18,7 @@ namespace HGT.EAM.WebServices.Application.Controllers;
 [Route("api/accounting")]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+[ResponseCache(Duration = 900)]
 public class AccountingControler : HGTController
 {
     private readonly List<EAMGridSettings> _gridSettings;
@@ -32,15 +33,22 @@ public class AccountingControler : HGTController
         _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == GriTypeEnums.HGTGridTypeEnum.Contabilidad);
     }
 
+    [ResponseCache(Duration = 900)]
     [HttpGet("transactions")]
     [EndpointSummary("Grilla de transacciones.")]
     [EndpointDescription("Representa la grilla transacciones")]
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTransactionsAsync(
         [FromQuery]
-        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes actual, 3 = Año anterior o últimos 12 meses")]
+        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes anterior, 3 = Mes actual, 4 = Año anterior, 5 = Mes y año en concreto")]
         ApiRequestEnum typeFilter,
         CancellationToken cancellationToken,
+        [FromQuery]
+        [Description("Mes en concreto a buscar, el rango de valores válidos es: 1-12")]
+        int? month = null,
+        [FromQuery]
+        [Description("Año en concreto, valores validos a partir del año anterior")]
+        int? year = null,
         [FromQuery]
         [Description("Número de página, se inicia con 1")]
         int page = 1,
@@ -49,39 +57,26 @@ public class AccountingControler : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.GrillaTransacciones);
-        var query = new GridDataOnlyGetQuery
-        {
-            Username = User.Identity.Name,
-            Password = User.Claims.FirstOrDefault(i => i.Type == "Password")?.Value,
-            Organization = User.Claims.FirstOrDefault(i => i.Type == "Organization")?.Value,
-            FunctionName = gridSettings.UserFunction,
-            GridName = gridSettings.GridName,
-            GridId = gridSettings.GridId,
-            Page = page,
-            NumberOfRowsFirstReturned = !pagSize.HasValue ? gridSettings.NumberRecordsFirstReturned : pagSize.GetValueOrDefault(),
-            DataspyId = typeFilter switch
-            {
-                ApiRequestEnum.Day => gridSettings.DataSpyIds.Day,
-                ApiRequestEnum.Month => gridSettings.DataSpyIds.Month,
-                ApiRequestEnum.Year => gridSettings.DataSpyIds.Year,
-                ApiRequestEnum.Custom => gridSettings.DataSpyIds.Custom,
-                _ => throw new InvalidOperationException("Invalid filter, accepted values ​​are: 1 = day, 2 = month, 3 = year, 4 = custom."),
-            },
-            GridHGT = GridEnums.HGTGridEnum.GrillaTransacciones,
-            GridTypeHGT = GriTypeEnums.HGTGridTypeEnum.Contabilidad
-        };
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.GrillaTransacciones, GriTypeEnums.HGTGridTypeEnum.Contabilidad, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 
+    [ResponseCache(Duration = 900)]
     [HttpGet("kardex")]
     [EndpointSummary("Informe de Kardex.")]
     [EndpointDescription("Representa al informe de cognos informe de kardex")]
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetKardexAsync(
         [FromQuery]
-        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes actual, 3 = Año anterior o últimos 12 meses")]
+        [Description("Tipo de filtro: 1 = dia anterior, 2 = Mes anterior, 3 = Mes actual, 4 = Año anterior, 5 = Mes y año en concreto")]
         ApiRequestEnum typeFilter,
         CancellationToken cancellationToken,
+        [FromQuery]
+        [Description("Mes en concreto a buscar, el rango de valores válidos es: 1-12")]
+        int? month = null,
+        [FromQuery]
+        [Description("Año en concreto, valores validos a partir del año anterior")]
+        int? year = null,
         [FromQuery]
         [Description("Número de página, se inicia con 1")]
         int page = 1,
@@ -90,27 +85,7 @@ public class AccountingControler : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.Kardex);
-        var query = new GridDataOnlyGetQuery
-        {
-            Username = User.Identity.Name,
-            Password = User.Claims.FirstOrDefault(i => i.Type == "Password")?.Value,
-            Organization = User.Claims.FirstOrDefault(i => i.Type == "Organization")?.Value,
-            FunctionName = gridSettings.UserFunction,
-            GridName = gridSettings.GridName,
-            GridId = gridSettings.GridId,
-            Page = page,
-            NumberOfRowsFirstReturned = !pagSize.HasValue ? gridSettings.NumberRecordsFirstReturned : pagSize.GetValueOrDefault(),
-            DataspyId = typeFilter switch
-            {
-                ApiRequestEnum.Day => gridSettings.DataSpyIds.Day,
-                ApiRequestEnum.Month => gridSettings.DataSpyIds.Month,
-                ApiRequestEnum.Year => gridSettings.DataSpyIds.Year,
-                ApiRequestEnum.Custom => gridSettings.DataSpyIds.Custom,
-                _ => throw new InvalidOperationException("Invalid filter, accepted values ​​are: 1 = day, 2 = month, 3 = year, 4 = custom."),
-            },
-            GridHGT = GridEnums.HGTGridEnum.Kardex,
-            GridTypeHGT = GriTypeEnums.HGTGridTypeEnum.Contabilidad
-        };
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.Kardex, GriTypeEnums.HGTGridTypeEnum.Contabilidad, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 }

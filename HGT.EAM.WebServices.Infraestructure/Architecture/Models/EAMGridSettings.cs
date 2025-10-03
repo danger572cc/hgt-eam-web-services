@@ -13,12 +13,16 @@ public class EAMGridSettings
     public int CursorPosition { get; set; }
     public HGTGridTypeEnum HGTGridType { get; set; }
     public HGTGridEnum HGTGridName { get; set; }
+
+    public string FilterField { get; set; } = string.Empty;
 }
 
 public class DataSpyIds
 {
-    public int Day { get; set; }
-    public int Month { get; set; }
-    public int Year { get; set; }
+    public int PreviousDay { get; set; }
+    public int PreviousMonth { get; set; }
+    public int CurrentMonth { get; set; }
+    public int LastYear { get; set; }
     public int Custom { get; set; }
+    public int AllRecords { get; set; }
 }
