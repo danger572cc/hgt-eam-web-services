@@ -17,9 +17,8 @@ public static class ServiceCollectionExtensions
 
         if (allGrids?.Count == 0)
             throw new InvalidOperationException("EAMGrids configuration section is empty.");
-
         services.AddSingleton(allGrids);
-        services.AddTransient<IEAMGridService, EAMGridService>();
+        services.AddScoped<IEAMGridService, EAMGridService>();
         return services;
     }
 }

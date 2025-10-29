@@ -11,7 +11,7 @@ using InvalidOperationException = System.InvalidOperationException;
 
 namespace HGT.EAM.WebServices.Conector.Architecture.Services;
 
-public class EAMGridService : IEAMGridService
+public class EAMGridService : IEAMGridService, IDisposable
 {
     private readonly GetGridDataOnlyPTClient _gridService;
 
@@ -47,22 +47,35 @@ public class EAMGridService : IEAMGridService
         _logger = logger;
     }
 
-    public async Task<Tuple<int, List<FIELD>, MP0116_GetGridDataOnly_001_ResultGRIDRESULT>> GetGridInfoAsync(GetGridDataOnlyRequestMsg request)
+    public void Dispose()
+    {
+        _gridService.Close();
+        GC.SuppressFinalize(this);
+    }
+
+    public async Task<MP0116_GetGridDataOnly_001_ResultGRIDRESULT> GetGridRowsAsync(GetGridDataOnlyRequestMsg request)
+    {
+        //datos
+        request.MP0116_GetGridDataOnly_001.FUNCTION_REQUEST_INFO.REQUEST_TYPE = FUNCTION_REQUEST_TYPE.LISTDATA_ONLYSTORED;
+        _logger.LogInformation($"Request trace: {Environment.NewLine} {request.GetStringXML()}");
+        var response = await _gridService.GetGridDataOnlyOpAsync(request.Organization, request.Security, null, null, null, null, request.MP0116_GetGridDataOnly_001);
+        _logger.LogInformation($"Request response: {Environment.NewLine} {response.GetStringXML()}");
+        //resultados
+        var rows = response.MP0116_GetGridDataOnly_001_Result.GRIDRESULT;
+        return rows;
+    }
+
+    public async Task<Tuple<int, List<FIELD>>> GetHeadGridAsync(GetGridDataOnlyRequestMsg request)
     {
         //total registros y definicion
         request.MP0116_GetGridDataOnly_001.FUNCTION_REQUEST_INFO.REQUEST_TYPE = FUNCTION_REQUEST_TYPE.LISTCOUNTSTORED;
         _logger.LogInformation($"Request count trace: {Environment.NewLine} {request.GetStringXML()}");
         var countResponse = await _gridService.GetGridDataOnlyOpAsync(request.Organization, request.Security, null, null, null, null, request.MP0116_GetGridDataOnly_001);
-        //datos
-        request.MP0116_GetGridDataOnly_001.FUNCTION_REQUEST_INFO.REQUEST_TYPE = FUNCTION_REQUEST_TYPE.LISTDATA_ONLYSTORED;
-        _logger.LogInformation($"Request trace: {Environment.NewLine} {request.GetStringXML()}");
-        var response = await _gridService.GetGridDataOnlyOpAsync(request.Organization, request.Security, null, null, null, null, request.MP0116_GetGridDataOnly_001);
-        _logger.LogInformation($"Response trace: {Environment.NewLine} {response.GetStringXML()}");
+        _logger.LogInformation($"Total records obtained: {countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.TOTALCOUNT}");
         //resultados
         var culture = CultureInfo.GetCultureInfo("en-US");
         int.TryParse(countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.TOTALCOUNT, NumberStyles.AllowThousands, culture, out int totalRows);
         var fields = countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.FIELDS.FIELD?.ToList();
-        var rows = response.MP0116_GetGridDataOnly_001_Result.GRIDRESULT;
-        return new Tuple<int, List<FIELD>, MP0116_GetGridDataOnly_001_ResultGRIDRESULT>(totalRows, fields, rows);
+        return new Tuple<int, List<FIELD>>(totalRows, fields);
     }
 }

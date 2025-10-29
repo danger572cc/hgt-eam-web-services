@@ -41,6 +41,7 @@ public class GridDataOnlyGetQuery : IQuery<ResultDataGridModel>
             ApiRequestEnum.LastYear => gridConfiguration.DataSpyIds.LastYear,
             ApiRequestEnum.FullMonthByYear => gridConfiguration.DataSpyIds.AllRecords,
             ApiRequestEnum.Custom => gridConfiguration.DataSpyIds.Custom,
+            ApiRequestEnum.AllRecords => gridConfiguration.DataSpyIds.AllRecords,
             _ => throw new InvalidOperationException("Invalid filter, accepted values ​​are: 1 = previous day, 2 = previous month, 3 = current month, 4 = Previous year, 5 = Specific month and year."),
         };
         GridHGT = gridHGT;

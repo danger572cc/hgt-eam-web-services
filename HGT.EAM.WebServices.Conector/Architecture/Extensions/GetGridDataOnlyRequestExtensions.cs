@@ -15,7 +15,7 @@ public static class GetGridDataOnlyRequestExtensions
         List<DateTime> dateRanges,
         string fieldFilter = "",
         int cursorPosition = 0,
-        int numberOfRows = 500) 
+        int numberOfRows = 2000) 
     {
         var authentication = new UsernameToken()
         {

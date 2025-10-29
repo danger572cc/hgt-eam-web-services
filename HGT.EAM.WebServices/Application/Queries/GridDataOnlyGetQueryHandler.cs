@@ -11,11 +11,15 @@ public class GridDataOnlyGetQueryHandler : IQueryHandler<GridDataOnlyGetQuery, R
 {
     private readonly IMapper _mapper;
 
-    private readonly IEAMGridService _gridEAMService;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public GridDataOnlyGetQueryHandler(IMapper mapper, IEAMGridService gridEAMService)
+    private List<FIELD> _fields;
+
+    private int _totalRowsObtained;
+
+    public GridDataOnlyGetQueryHandler(IMapper mapper, IServiceScopeFactory scopeFactory)
     {
-        _gridEAMService = gridEAMService;
+        _scopeFactory = scopeFactory;
         _mapper = mapper;
     }
 
@@ -31,14 +35,27 @@ public class GridDataOnlyGetQueryHandler : IQueryHandler<GridDataOnlyGetQuery, R
         }
         int page = command.Page > 0 ? (command.NumberOfRowsFirstReturned * (command.Page - 1)) + 1 : 0;
         var request = GetGridDataOnlyRequestExtensions.GetObject(command.Organization, command.Username, command.Password, command.GridId, command.GridName, command.FunctionName, command.DataspyId, dateRanges, filterField, page, command.NumberOfRowsFirstReturned);
-        var response = await _gridEAMService.GetGridInfoAsync(request);
-        
-        var fields = _mapper.Map<List<Field>>(response.Item2);
-        var rows = response.Item3.GRID.DATA != null ? response.Item3.GRID.DATA.Items.ConvertToType<List<DATAROW>>().GetDTORows(fields) : [];
+
+        MP0116_GetGridDataOnly_001_ResultGRIDRESULT? response = null;
+
+        using (var scope = _scopeFactory.CreateScope())
+        {
+            var gridService = scope.ServiceProvider.GetRequiredService<IEAMGridService>();
+            if (page == 1 || _fields == null) 
+            {
+                var headResponse = await gridService.GetHeadGridAsync(request);
+                _totalRowsObtained = headResponse.Item1;
+                _fields = headResponse.Item2;
+            }
+            response = await gridService.GetGridRowsAsync(request);
+        }
+
+        var fields = _mapper.Map<List<Field>>(_fields);
+        var rows = response.GRID.DATA != null ? response.GRID.DATA.Items.ConvertToType<List<DATAROW>>().GetDTORows(fields) : [];
         var responseDTO = new ResultDataGridModel 
         {
-            TotalRecords = response.Item1,
-            TotalPages = (int)Math.Ceiling((double)response.Item1 / command.NumberOfRowsFirstReturned),
+            TotalRecords = _totalRowsObtained,
+            TotalPages = (int)Math.Ceiling((double)_totalRowsObtained / command.NumberOfRowsFirstReturned),
             CurrentPage = command.Page,
             TotalRecordsReturned = rows.Count,
             DataRecord = new DataRecord 

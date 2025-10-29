@@ -52,7 +52,7 @@ public class ProvisionController : HGTController
         [Description("Número de página, se inicia con 1")]
         int page = 1,
         [FromQuery]
-        [Description("Número de registros a obtener, el máximo permitido son 200")]
+        [Description("Número de registros a obtener.")]
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.DatosGeneralesContrato);
@@ -80,7 +80,7 @@ public class ProvisionController : HGTController
         [Description("Número de página, se inicia con 1")]
         int page = 1,
         [FromQuery]
-        [Description("Número de registros a obtener, el máximo permitido son 200")]
+        [Description("Número de registros a obtener.")]
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.AuditoriaOC);
@@ -108,7 +108,7 @@ public class ProvisionController : HGTController
         [Description("Número de página, se inicia con 1")]
         int page = 1,
         [FromQuery]
-        [Description("Número de registros a obtener, el máximo permitido son 200")]
+        [Description("Número de registros a obtener.")]
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.VistaFinanzasOC);
@@ -136,7 +136,7 @@ public class ProvisionController : HGTController
         [Description("Número de página, se inicia con 1")]
         int page = 1,
         [FromQuery]
-        [Description("Número de registros a obtener, el máximo permitido son 200")]
+        [Description("Número de registros a obtener.")]
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.VistaFinanzasSC);

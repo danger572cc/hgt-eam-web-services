@@ -60134,7 +60134,10 @@ namespace EAM.WebServices
     [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://schemas.datastream.net/MP_functions/MP0116_GetGridDataOnly_001")]
     public enum FUNCTION_REQUEST_TYPE
     {
-        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlEnumAttribute("LIST.HEAD_DATA.STORED")]
+        LISTHEADDATASTORED,
+
         /// <remarks/>
         [System.Xml.Serialization.XmlEnumAttribute("LIST.COUNT.STORED")]
         LISTCOUNTSTORED,
