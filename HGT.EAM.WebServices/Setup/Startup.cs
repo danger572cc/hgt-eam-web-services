@@ -4,6 +4,7 @@ using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 using Mapster;
 using Scalar.AspNetCore;
 using Serilog;
+using Serilog.Events;
 using System.Reflection;
 
 namespace HGT.EAM.WebServices.Setup;
@@ -19,16 +20,13 @@ public class Startup(IConfiguration configuration)
             app.UseCors("AllowAll");
             app.UseExceptionHandler("/error");
         }
-        /*else
+        else
         {
-            app.UseCors("HGT");
+            app.UseCors("HGT_QAS");
             app.UseExceptionHandler("/error");
             app.UseHsts();
-        }*/
-        app.UseSerilogRequestLogging();
-        app.UseAuthentication();
-        app.UseAuthorization();
-        app.UseStaticFiles();
+        }
+
         app.MapOpenApi();
         app.MapScalarApiReference(options =>
         {
@@ -41,12 +39,49 @@ public class Startup(IConfiguration configuration)
             options.Favicon = "/images/favicon.ico";
             options.HeadContent = @"<div style='position:fixed;top:0;left:0;width:100%;height:4.5%;z-index:100;color:white;background-color: #222A36 !important;'><a href='https://www.aep.cl/'><img src='https://www.aep.cl/wp-content/uploads/2025/07/logoHGT-blanco.png' alt='Hanseatic Global Terminals' style='width: 7%;margin-top: 5px;'></a></div>";
         });
-        //app.UseHttpsRedirection();
-        app.MapControllers();
+        app.UseHttpsRedirection();
+        app.UseStaticFiles();
+        app.UseRouting();
+
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                Log.Information("Invoking endpoint {Method} {Path}", context.Request.Method, context.Request.Path);
+            }
+            await next();
+        });
+
+        app.UseSerilogRequestLogging(options =>
+        {
+            options.MessageTemplate = "Request {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms by {User}";
+
+            options.GetLevel = (httpContext, elapsed, ex) =>
+            {
+                if (ex != null)
+                    return LogEventLevel.Error;
+
+                var path = httpContext.Request.Path.Value ?? string.Empty;
+                return path.Contains("/api", StringComparison.OrdinalIgnoreCase)
+                    ? LogEventLevel.Information
+                    : LogEventLevel.Verbose;
+            };
+
+            options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+            {
+                diagnosticContext.Set("RequestPath", httpContext.Request.Path.Value ?? string.Empty);
+                string? user = httpContext.User?.Identity?.IsAuthenticated == true ? httpContext.User.Identity.Name
+                    : "Anonymous";
+                diagnosticContext.Set("CurrentUser", user);
+            };
+        });
         app.UseMiddleware<ExceptionMiddleware>()
             .UseMiddleware<ResponseMiddleware>()
             .UseMiddleware<QueryParamsValidationMiddleware>();
         app.UseResponseCaching();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapControllers();
     }
 
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
@@ -59,12 +94,18 @@ public class Startup(IConfiguration configuration)
                        .AllowAnyMethod()
                        .AllowAnyHeader();
             });
-            /*options.AddPolicy("HGT", builder =>
+            options.AddPolicy("HGT_PROD", builder =>
             {
-                builder.WithOrigins("https://eamdev.hgtlatam.com/")
+                builder.WithOrigins("https://eam.hgtlatam.com:5050/")
                        .AllowAnyMethod()
                        .AllowAnyHeader();
-            });*/
+            });
+            options.AddPolicy("HGT_QAS", builder =>
+            {
+                builder.WithOrigins("https://eamdev.hgtlatam.com:5050/")
+                       .AllowAnyMethod()
+                       .AllowAnyHeader();
+            });
         });
         services.AddControllers();
         services.AddApplicationServices(configuration);
