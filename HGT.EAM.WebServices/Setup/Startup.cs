@@ -2,6 +2,7 @@
 using HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 using Mapster;
+using Microsoft.AspNetCore.Http;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
@@ -17,12 +18,10 @@ public class Startup(IConfiguration configuration)
     {
         if (app.Environment.IsDevelopment())
         {
-            app.UseCors("AllowAll");
             app.UseExceptionHandler("/error");
         }
         else
         {
-            app.UseCors("HGT_QAS");
             app.UseExceptionHandler("/error");
             app.UseHsts();
         }
@@ -42,19 +41,34 @@ public class Startup(IConfiguration configuration)
         app.UseHttpsRedirection();
         app.UseStaticFiles();
         app.UseRouting();
-
+        app.UseAuthentication();
+        app.UseAuthorization();
         app.Use(async (context, next) =>
         {
-            if (context.Request.Path.StartsWithSegments("/api"))
+            var path = context.Request.Path.Value ?? string.Empty;
+            var user = context.User?.Identity?.IsAuthenticated == true
+                ? context.User.Identity.Name
+                : "Anonymous";
+
+            var method = context.Request.Method;
+            var queryString = context.Request.QueryString.HasValue ? context.Request.QueryString.Value : string.Empty;
+
+            using (Serilog.Context.LogContext.PushProperty("RequestPath", path))
+            using (Serilog.Context.LogContext.PushProperty("CurrentUser", user))
+            using (Serilog.Context.LogContext.PushProperty("QueryString", queryString))
             {
-                Log.Information("Invoking endpoint {Method} {Path}", context.Request.Method, context.Request.Path);
+                if (context.Request.Path.StartsWithSegments("/api"))
+                {
+                    Log.Information("Invoking endpoint {Method} {Path} Query={QueryString}", method, path, queryString);
+                }
+                await next();
             }
-            await next();
+
         });
 
         app.UseSerilogRequestLogging(options =>
         {
-            options.MessageTemplate = "Request {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms by {User}";
+            options.MessageTemplate = "Request {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms by {CurrentUser}";
 
             options.GetLevel = (httpContext, elapsed, ex) =>
             {
@@ -79,34 +93,11 @@ public class Startup(IConfiguration configuration)
             .UseMiddleware<ResponseMiddleware>()
             .UseMiddleware<QueryParamsValidationMiddleware>();
         app.UseResponseCaching();
-        app.UseAuthentication();
-        app.UseAuthorization();
         app.MapControllers();
     }
 
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
-        services.AddCors(options =>
-        {
-            options.AddPolicy("AllowAll", builder =>
-            {
-                builder.AllowAnyOrigin()
-                       .AllowAnyMethod()
-                       .AllowAnyHeader();
-            });
-            options.AddPolicy("HGT_PROD", builder =>
-            {
-                builder.WithOrigins("https://eam.hgtlatam.com:5050/")
-                       .AllowAnyMethod()
-                       .AllowAnyHeader();
-            });
-            options.AddPolicy("HGT_QAS", builder =>
-            {
-                builder.WithOrigins("https://eamdev.hgtlatam.com:5050/")
-                       .AllowAnyMethod()
-                       .AllowAnyHeader();
-            });
-        });
         services.AddControllers();
         services.AddApplicationServices(configuration);
         services.AddConfigOpenApi(configuration);
