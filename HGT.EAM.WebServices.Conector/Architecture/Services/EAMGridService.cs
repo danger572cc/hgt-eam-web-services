@@ -13,6 +13,8 @@ namespace HGT.EAM.WebServices.Conector.Architecture.Services;
 
 public class EAMGridService : IEAMGridService, IDisposable
 {
+    private readonly CultureInfo _culture;
+
     private readonly GetGridDataOnlyPTClient _gridService;
 
     private readonly ILogger<EAMGridService> _logger;
@@ -45,6 +47,8 @@ public class EAMGridService : IEAMGridService, IDisposable
                         TrustedStoreLocation = StoreLocation.LocalMachine
                     };
         _logger = logger;
+
+        _logger.LogInformation($"Current culture: {CultureInfo.CurrentCulture.Name}");
     }
 
     public void Dispose()
@@ -73,8 +77,9 @@ public class EAMGridService : IEAMGridService, IDisposable
         var countResponse = await _gridService.GetGridDataOnlyOpAsync(request.Organization, request.Security, null, null, null, null, request.MP0116_GetGridDataOnly_001);
         _logger.LogInformation($"Total records obtained: {countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.TOTALCOUNT}");
         //resultados
-        var culture = CultureInfo.GetCultureInfo("en-US");
-        int.TryParse(countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.TOTALCOUNT, NumberStyles.AllowThousands, culture, out int totalRows);
+        //var culture = CultureInfo.GetCultureInfo("es-CL");
+        int.TryParse(countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.TOTALCOUNT, NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out int totalRows);
+        _logger.LogInformation($"Value var totalRows: {totalRows}");
         var fields = countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.FIELDS.FIELD?.ToList();
         return new Tuple<int, List<FIELD>>(totalRows, fields);
     }
