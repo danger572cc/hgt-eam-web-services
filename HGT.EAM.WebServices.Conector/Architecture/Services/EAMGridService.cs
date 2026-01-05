@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel;
 using System.ServiceModel.Security;
+using System.Text.RegularExpressions;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace HGT.EAM.WebServices.Conector.Architecture.Services;
@@ -77,8 +78,7 @@ public class EAMGridService : IEAMGridService, IDisposable
         var countResponse = await _gridService.GetGridDataOnlyOpAsync(request.Organization, request.Security, null, null, null, null, request.MP0116_GetGridDataOnly_001);
         _logger.LogInformation($"Total records obtained: {countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.TOTALCOUNT}");
         //resultados
-        //var culture = CultureInfo.GetCultureInfo("es-CL");
-        int.TryParse(countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.TOTALCOUNT, NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out int totalRows);
+        int.TryParse(countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.TOTALCOUNT.Replace(".", "").Replace(",", "").Trim(), out int totalRows);
         _logger.LogInformation($"Value var totalRows: {totalRows}");
         var fields = countResponse.MP0116_GetGridDataOnly_001_Result.GRIDRESULT.GRID.FIELDS.FIELD?.ToList();
         return new Tuple<int, List<FIELD>>(totalRows, fields);

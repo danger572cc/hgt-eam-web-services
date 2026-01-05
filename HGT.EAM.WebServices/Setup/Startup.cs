@@ -2,7 +2,6 @@
 using HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 using Mapster;
-using Microsoft.AspNetCore.Http;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
@@ -59,6 +58,7 @@ public class Startup(IConfiguration configuration)
             {
                 if (context.Request.Path.StartsWithSegments("/api"))
                 {
+                    Log.Information($"Current environment: {app.Environment.EnvironmentName}");
                     Log.Information("Invoking endpoint {Method} {Path} Query={QueryString}", method, path, queryString);
                 }
                 await next();
