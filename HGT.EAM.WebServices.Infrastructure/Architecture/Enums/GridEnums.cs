@@ -1,6 +1,6 @@
 ﻿namespace HGT.EAM.WebServices.Infrastructure.Architecture.Enums;
 
-public static class GriTypeEnums 
+public static class GridTypeEnums 
 {
     public enum HGTGridTypeEnum 
     {

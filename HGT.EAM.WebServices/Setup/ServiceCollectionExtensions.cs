@@ -1,6 +1,8 @@
-﻿using HGT.EAM.WebServices.Conector.Architecture.Interfaces;
+using HGT.EAM.WebServices.Conector.Architecture.Interfaces;
 using HGT.EAM.WebServices.Conector.Architecture.Services;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Models;
+using HGT.EAM.WebServices.Infrastructure.Architecture.GridCache;
+using Microsoft.EntityFrameworkCore;
 
 namespace HGT.EAM.WebServices.Setup;
 
@@ -19,6 +21,12 @@ public static class ServiceCollectionExtensions
             throw new InvalidOperationException("EAMGrids configuration section is empty.");
         services.AddSingleton(allGrids);
         services.AddScoped<IEAMGridService, EAMGridService>();
+
+        services.Configure<GridCacheOptions>(configuration.GetSection(GridCacheOptions.SectionName));
+        var connectionString = configuration.GetConnectionString("GridCache") ?? "Data Source=gridcache.db";
+        services.AddDbContext<GridCacheDbContext>(options => options.UseSqlite(connectionString));
+        services.AddScoped<IGridCacheService, GridCacheService>();
+
         return services;
     }
 }

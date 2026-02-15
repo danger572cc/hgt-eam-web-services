@@ -1,12 +1,16 @@
 ﻿using HGT.EAM.WebServices.Infrastructure.Architecture.Exceptions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 
-public class ExceptionMiddleware(RequestDelegate next)
+public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
 {
     private readonly RequestDelegate _next = next;
+    private readonly ILogger<ExceptionMiddleware> _logger = logger;
 
     public async Task Invoke(HttpContext context)
     {
@@ -20,15 +24,25 @@ public class ExceptionMiddleware(RequestDelegate next)
         }
     }
 
-    private static Task HandleExceptionAsync(HttpContext context, Exception ex)
+    private async Task HandleExceptionAsync(HttpContext context, Exception ex)
     {
         if (context.Response.HasStarted)
         {
-            return Task.CompletedTask;
+            return;
         }
 
+        var correlationId = GetOrCreateCorrelationId(context);
+        var env = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Hosting.IHostingEnvironment>();
+        var isDevelopment = env.IsDevelopment();
+
+        // Logging estructurado
+        _logger.LogError(ex, "Unhandled exception. CorrelationId: {CorrelationId}, Path: {Path}, User: {User}",
+            correlationId,
+            context.Request.Path,
+            context.User?.Identity?.Name ?? "Anonymous");
+
         int statusCode = 500;
-        string message = $"Ha ocurrido un error interno. Detalles: {ex.Message}";
+        string message = isDevelopment ? $"Internal error. Details: {ex.Message}" : "An unexpected error occurred. Please try again later.";
         object response;
 
         switch (ex)
@@ -40,7 +54,8 @@ public class ExceptionMiddleware(RequestDelegate next)
                 {
                     statusCode,
                     message,
-                    validationErrors
+                    validationErrors,
+                    correlationId
                 };
                 break;
 
@@ -50,17 +65,19 @@ public class ExceptionMiddleware(RequestDelegate next)
                 response = new
                 {
                     statusCode,
-                    message
+                    message,
+                    correlationId
                 };
                 break;
 
             case UnauthorizedAccessException:
                 statusCode = 401;
-                message = "No autorizado.";
+                message = "Unauthorized.";
                 response = new
                 {
                     statusCode,
-                    message
+                    message,
+                    correlationId
                 };
                 break;
 
@@ -70,7 +87,8 @@ public class ExceptionMiddleware(RequestDelegate next)
                 response = new
                 {
                     statusCode,
-                    message
+                    message,
+                    correlationId
                 };
                 break;
 
@@ -80,7 +98,8 @@ public class ExceptionMiddleware(RequestDelegate next)
                 response = new
                 {
                     statusCode,
-                    message
+                    message,
+                    correlationId
                 };
                 break;
 
@@ -90,7 +109,8 @@ public class ExceptionMiddleware(RequestDelegate next)
                 response = new
                 {
                     statusCode,
-                    message
+                    message,
+                    correlationId
                 };
                 break;
 
@@ -98,7 +118,8 @@ public class ExceptionMiddleware(RequestDelegate next)
                 response = new
                 {
                     statusCode,
-                    message
+                    message,
+                    correlationId
                 };
                 break;
         }
@@ -106,12 +127,31 @@ public class ExceptionMiddleware(RequestDelegate next)
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
         context.Response.Headers["X-Exception-Occurred"] = "true";
+        context.Response.Headers["X-Correlation-Id"] = correlationId;
 
         var serializeOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-        return context.Response.WriteAsync(JsonSerializer.Serialize(response, serializeOptions));
+        await context.Response.WriteAsync(JsonSerializer.Serialize(response, serializeOptions));
+    }
+
+    private static string GetOrCreateCorrelationId(HttpContext context)
+    {
+        const string headerName = "X-Correlation-Id";
+        if (context.Request.Headers.TryGetValue(headerName, out var correlationId))
+        {
+            return correlationId!;
+        }
+
+        var newCorrelationId = Guid.NewGuid().ToString();
+        context.Response.OnStarting(() =>
+        {
+            context.Response.Headers[headerName] = newCorrelationId;
+            return Task.CompletedTask;
+        });
+
+        return newCorrelationId;
     }
 }

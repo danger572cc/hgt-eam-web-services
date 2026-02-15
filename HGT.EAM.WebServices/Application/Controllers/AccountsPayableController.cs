@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel;
 using System.Net;
 using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.ApiFilterEnums;
+using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GridTypeEnums;
 
 namespace HGT.EAM.WebServices.Application.Controllers;
 
@@ -29,7 +30,7 @@ public class AccountsPayableController : HGTController
         )
         : base(mediator, logger)
     {
-        _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == Infrastructure.Architecture.Enums.GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar);
+        _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == Infrastructure.Architecture.Enums.GridTypeEnums.HGTGridTypeEnum.CuentasPorPagar);
     }
 
     [ResponseCache(Duration = 900)]
@@ -56,7 +57,7 @@ public class AccountsPayableController : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.ListaComprobantesFacturaEcuador);
-        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.ListaComprobantesFacturaEcuador, GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar, page, pagSize, month, year);
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.ListaComprobantesFacturaEcuador, GridTypeEnums.HGTGridTypeEnum.CuentasPorPagar, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 
@@ -84,7 +85,7 @@ public class AccountsPayableController : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.VistaFinanzasFacturacion);
-        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.VistaFinanzasFacturacion, GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar, page, pagSize, month, year);
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.VistaFinanzasFacturacion, GridTypeEnums.HGTGridTypeEnum.CuentasPorPagar, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 
@@ -112,7 +113,7 @@ public class AccountsPayableController : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.VistaOrdenesDeCompras);
-        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.VistaFinanzasOC, GriTypeEnums.HGTGridTypeEnum.CuentasPorPagar, page, pagSize, month, year);
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.VistaFinanzasOC, GridTypeEnums.HGTGridTypeEnum.CuentasPorPagar, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 }

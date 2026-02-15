@@ -1,11 +1,15 @@
-﻿using HGT.EAM.WebServices.Application.Mapper;
+using HGT.EAM.WebServices.Application.Mapper;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
+using HGT.EAM.WebServices.Infrastructure.Architecture.GridCache;
 using Mapster;
+using Microsoft.AspNetCore.RateLimiting;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
+using System.Net;
 using System.Reflection;
+using System.Threading.RateLimiting;
 
 namespace HGT.EAM.WebServices.Setup;
 
@@ -15,6 +19,12 @@ public class Startup(IConfiguration configuration)
 
     public void Configure(WebApplication app)
     {
+        using (var scope = app.Services.CreateScope())
+        {
+            var gridCacheDb = scope.ServiceProvider.GetRequiredService<GridCacheDbContext>();
+            gridCacheDb.Database.EnsureCreated();
+        }
+
         if (app.Environment.IsDevelopment())
         {
             app.UseExceptionHandler("/error");
@@ -40,8 +50,10 @@ public class Startup(IConfiguration configuration)
         app.UseHttpsRedirection();
         app.UseStaticFiles();
         app.UseRouting();
+        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
+
         app.Use(async (context, next) =>
         {
             var path = context.Request.Path.Value ?? string.Empty;
@@ -93,12 +105,74 @@ public class Startup(IConfiguration configuration)
             .UseMiddleware<ResponseMiddleware>()
             .UseMiddleware<QueryParamsValidationMiddleware>();
         app.UseResponseCaching();
-        app.MapControllers();
+        app.MapControllers().RequireRateLimiting("api");
     }
 
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddControllers();
+
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+            options.OnRejected = async (context, token) =>
+            {
+                if (context.HttpContext.Response.HasStarted)
+                {
+                    return;
+                }
+
+                context.HttpContext.Response.ContentType = "application/json";
+
+                var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue)
+                    ? (int)Math.Ceiling(retryAfterValue.TotalSeconds)
+                    : (int?)null;
+
+                if (retryAfter is not null)
+                {
+                    context.HttpContext.Response.Headers.RetryAfter = retryAfter.Value.ToString();
+                }
+
+                await context.HttpContext.Response.WriteAsync(
+                    $"{{\"statusCode\":429,\"message\":\"Too many requests\",\"retryAfterSeconds\":{(retryAfter is null ? "null" : retryAfter.Value.ToString())}}}",
+                    token);
+            };
+
+            options.AddPolicy("api", httpContext =>
+            {
+                // Solo para endpoints de API.
+                if (!httpContext.Request.Path.StartsWithSegments("/api"))
+                {
+                    return RateLimitPartition.GetNoLimiter("non-api");
+                }
+
+                string key;
+
+                if (httpContext.User?.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(httpContext.User.Identity.Name))
+                {
+                    key = $"user:{httpContext.User.Identity.Name}";
+                }
+                else
+                {
+                    var ip = httpContext.Connection.RemoteIpAddress;
+                    key = ip is null ? "ip:unknown" : $"ip:{ip}";
+                }
+
+                // Ventana fija: 60 requests por minuto por usuario (o por IP si anónimo).
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: key,
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 60,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        AutoReplenishment = true
+                    });
+            });
+        });
+
         services.AddApplicationServices(configuration);
         services.AddConfigOpenApi(configuration);
         services.AddMapster();

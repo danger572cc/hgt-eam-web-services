@@ -1,11 +1,11 @@
-﻿using HGT.EAM.WebServices.Conector.Architecture.Models;
+using HGT.EAM.WebServices.Conector.Architecture.Models;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Enums;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Models;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Query;
 using System.Security.Claims;
 using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.ApiFilterEnums;
 using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GridEnums;
-using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GriTypeEnums;
+using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GridTypeEnums;
 
 namespace HGT.EAM.WebServices.Application.Queries;
 
@@ -52,7 +52,7 @@ public class GridDataOnlyGetQuery : IQuery<ResultDataGridModel>
             var initDate = new DateTime(year.GetValueOrDefault(), month.GetValueOrDefault(), 1);
             int lastDay = DateTime.DaysInMonth(initDate.Year, initDate.Month);
             StartDate = initDate;
-            EndDate = new DateTime(year.GetValueOrDefault(), month.GetValueOrDefault(), lastDay, 23, 59, 0);
+            EndDate = new DateTime(year.GetValueOrDefault(), month.GetValueOrDefault(), lastDay, 0, 0, 0);
         }
     }
 

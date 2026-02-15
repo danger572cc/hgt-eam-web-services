@@ -1,5 +1,5 @@
 ﻿using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GridEnums;
-using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GriTypeEnums;
+using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GridTypeEnums;
 
 namespace HGT.EAM.WebServices.Infrastructure.Architecture.Models;
 

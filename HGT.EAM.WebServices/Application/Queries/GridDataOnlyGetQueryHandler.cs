@@ -1,4 +1,4 @@
-﻿using EAM.WebServices;
+using EAM.WebServices;
 using HGT.EAM.WebServices.Conector.Architecture.Extensions;
 using HGT.EAM.WebServices.Conector.Architecture.Interfaces;
 using HGT.EAM.WebServices.Conector.Architecture.Models;
@@ -9,61 +9,88 @@ namespace HGT.EAM.WebServices.Application.Queries;
 
 public class GridDataOnlyGetQueryHandler : IQueryHandler<GridDataOnlyGetQuery, ResultDataGridModel>
 {
+    private readonly IGridCacheService _cache;
     private readonly IMapper _mapper;
-
     private readonly IServiceScopeFactory _scopeFactory;
 
-    private List<FIELD> _fields;
-
-    private int _totalRowsObtained;
-
-    public GridDataOnlyGetQueryHandler(IMapper mapper, IServiceScopeFactory scopeFactory)
+    public GridDataOnlyGetQueryHandler(
+        IGridCacheService cache,
+        IMapper mapper,
+        IServiceScopeFactory scopeFactory)
     {
+        _cache = cache;
         _scopeFactory = scopeFactory;
         _mapper = mapper;
     }
 
     public async ValueTask<ResultDataGridModel> Handle(GridDataOnlyGetQuery command, CancellationToken cancellationToken)
     {
+        var cacheKey = _cache.ComputeCacheKey(
+            command.Username,
+            command.Organization,
+            command.GridId,
+            command.GridName,
+            command.FunctionName,
+            command.DataspyId,
+            command.StartDate,
+            command.EndDate,
+            command.FilterField);
+
+        var page = command.Page > 0 ? command.Page : 1;
+        var pageSize = command.NumberOfRowsFirstReturned;
+
+        var cached = await _cache.GetPageAsync(cacheKey, page, pageSize, cancellationToken);
+        if (cached != null)
+            return cached;
+
         var dateRanges = new List<DateTime>();
-        string filterField = string.Empty;
+        var filterField = string.Empty;
         if (command.StartDate != null && command.EndDate != null)
         {
             dateRanges.Add(command.StartDate.GetValueOrDefault());
             dateRanges.Add(command.EndDate.GetValueOrDefault());
             filterField = command.FilterField;
         }
-        int page = command.Page > 0 ? (command.NumberOfRowsFirstReturned * (command.Page - 1)) + 1 : 0;
-        var request = GetGridDataOnlyRequestExtensions.GetObject(command.Organization, command.Username, command.Password, command.GridId, command.GridName, command.FunctionName, command.DataspyId, dateRanges, filterField, page, command.NumberOfRowsFirstReturned);
 
-        MP0116_GetGridDataOnly_001_ResultGRIDRESULT? response = null;
+        using var scope = _scopeFactory.CreateScope();
+        var gridService = scope.ServiceProvider.GetRequiredService<IEAMGridService>();
 
-        using (var scope = _scopeFactory.CreateScope())
+        var headRequest = GetGridDataOnlyRequestExtensions.GetObject(command.Organization, command.Username, command.Password, command.GridId, command.GridName, command.FunctionName, command.DataspyId, dateRanges, filterField, 0, pageSize);
+        var (totalRows, fieldsEam) = await gridService.GetHeadGridAsync(headRequest);
+        var fields = _mapper.Map<List<Field>>(fieldsEam);
+
+        var allRows = new List<Dictionary<string, object>>(totalRows);
+        var cursorPosition = 1;
+
+        while (true)
         {
-            var gridService = scope.ServiceProvider.GetRequiredService<IEAMGridService>();
-            if (page == 1 || _fields == null) 
-            {
-                var headResponse = await gridService.GetHeadGridAsync(request);
-                _totalRowsObtained = headResponse.Item1;
-                _fields = headResponse.Item2;
-            }
-            response = await gridService.GetGridRowsAsync(request);
+            var dataRequest = GetGridDataOnlyRequestExtensions.GetObject(command.Organization, command.Username, command.Password, command.GridId, command.GridName, command.FunctionName, command.DataspyId, dateRanges, filterField, cursorPosition, pageSize);
+            var response = await gridService.GetGridRowsAsync(dataRequest);
+            var rows = response.GRID.DATA != null
+                ? response.GRID.DATA.Items.ConvertToType<List<DATAROW>>().GetDTORows(fields)
+                : [];
+            allRows.AddRange(rows);
+            if (rows.Count < pageSize)
+                break;
+            cursorPosition += rows.Count;
         }
 
-        var fields = _mapper.Map<List<Field>>(_fields);
-        var rows = response.GRID.DATA != null ? response.GRID.DATA.Items.ConvertToType<List<DATAROW>>().GetDTORows(fields) : [];
-        var responseDTO = new ResultDataGridModel 
+        await _cache.SaveFullGridAsync(cacheKey, totalRows, fields, allRows, cancellationToken);
+
+        var fromCache = await _cache.GetPageAsync(cacheKey, page, pageSize, cancellationToken);
+        if (fromCache != null)
+            return fromCache;
+
+        var skip = (page - 1) * pageSize;
+        var pageRows = allRows.Skip(skip).Take(pageSize).ToList();
+        var totalPages = (int)Math.Ceiling((double)totalRows / pageSize);
+        return new ResultDataGridModel
         {
-            TotalRecords = _totalRowsObtained,
-            TotalPages = (int)Math.Ceiling((double)_totalRowsObtained / command.NumberOfRowsFirstReturned),
-            CurrentPage = command.Page,
-            TotalRecordsReturned = rows.Count,
-            DataRecord = new DataRecord 
-            {
-                Fields = fields,
-                Rows = rows
-            }
+            TotalRecords = totalRows,
+            TotalPages = totalPages,
+            CurrentPage = page,
+            TotalRecordsReturned = pageRows.Count,
+            DataRecord = new DataRecord { Fields = fields, Rows = pageRows }
         };
-        return responseDTO;
     }
 }

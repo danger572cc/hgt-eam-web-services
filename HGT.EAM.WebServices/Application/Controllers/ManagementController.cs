@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel;
 using System.Net;
 using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.ApiFilterEnums;
+using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GridTypeEnums;
 
 namespace HGT.EAM.WebServices.Application.Controllers;
 
@@ -29,7 +30,7 @@ public class ManagementController : HGTController
         )
         : base(mediator, logger)
     {
-        _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == GriTypeEnums.HGTGridTypeEnum.ControlGestion);
+        _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == GridTypeEnums.HGTGridTypeEnum.ControlGestion);
     }
 
     [ResponseCache(Duration = 900)]
@@ -56,7 +57,7 @@ public class ManagementController : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.GrillaProvisiones);
-        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.GrillaProvisiones, GriTypeEnums.HGTGridTypeEnum.ControlGestion, page, pagSize, month, year);
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.GrillaProvisiones, GridTypeEnums.HGTGridTypeEnum.ControlGestion, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 
@@ -84,7 +85,7 @@ public class ManagementController : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.CostosMantenimiento);
-        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.CostosMantenimiento, GriTypeEnums.HGTGridTypeEnum.ControlGestion, page, pagSize, month, year);
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.CostosMantenimiento, GridTypeEnums.HGTGridTypeEnum.ControlGestion, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 }

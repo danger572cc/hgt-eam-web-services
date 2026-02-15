@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel;
 using System.Net;
 using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.ApiFilterEnums;
+using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GridTypeEnums;
 
 namespace HGT.EAM.WebServices.Application.Controllers;
 
@@ -19,24 +20,23 @@ namespace HGT.EAM.WebServices.Application.Controllers;
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 [ProducesResponseType(StatusCodes.Status500InternalServerError)]
 [ResponseCache(Duration = 900)]
-public class AccountingControler : HGTController
+public class AccountingController : HGTController
 {
     private readonly List<EAMGridSettings> _gridSettings;
 
-    public AccountingControler(
+    public AccountingController(
         IMediator mediator,
-        ILogger<AccountingControler> logger,
+        ILogger<AccountingController> logger,
         List<EAMGridSettings> gridSettings
         )
         : base(mediator, logger)
     {
-        _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == GriTypeEnums.HGTGridTypeEnum.Contabilidad);
+        _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == GridTypeEnums.HGTGridTypeEnum.Contabilidad);
     }
 
     [ResponseCache(Duration = 900)]
     [HttpGet("transactions")]
     [EndpointSummary("Grilla de transacciones.")]
-    [EndpointDescription("Representa la grilla transacciones")]
     [ProducesResponseType(typeof(ResultDataGridModel), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTransactionsAsync(
         [FromQuery]
@@ -57,7 +57,7 @@ public class AccountingControler : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.GrillaTransacciones);
-        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.GrillaTransacciones, GriTypeEnums.HGTGridTypeEnum.Contabilidad, page, pagSize, month, year);
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.GrillaTransacciones, GridTypeEnums.HGTGridTypeEnum.Contabilidad, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 
@@ -85,7 +85,7 @@ public class AccountingControler : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.Kardex);
-        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.Kardex, GriTypeEnums.HGTGridTypeEnum.Contabilidad, page, pagSize, month, year);
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.Kardex, GridTypeEnums.HGTGridTypeEnum.Contabilidad, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 }

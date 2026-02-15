@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel;
 using System.Net;
 using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.ApiFilterEnums;
+using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GridTypeEnums;
 
 namespace HGT.EAM.WebServices.Application.Controllers;
 
@@ -29,7 +30,7 @@ public class ProvisionController : HGTController
         )
         : base(mediator, logger)
     {
-        _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == GriTypeEnums.HGTGridTypeEnum.Abastecimiento);
+        _gridSettings = gridSettings.FindAll(filter => filter.HGTGridType == GridTypeEnums.HGTGridTypeEnum.Abastecimiento);
     }
 
     [ResponseCache(Duration = 900)]
@@ -56,7 +57,7 @@ public class ProvisionController : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.DatosGeneralesContrato);
-        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.DatosGeneralesContrato, GriTypeEnums.HGTGridTypeEnum.Abastecimiento, page, pagSize, month, year);
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.DatosGeneralesContrato, GridTypeEnums.HGTGridTypeEnum.Abastecimiento, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 
@@ -84,7 +85,7 @@ public class ProvisionController : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.AuditoriaOC);
-        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.AuditoriaOC, GriTypeEnums.HGTGridTypeEnum.Abastecimiento, page, pagSize, month, year);
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.AuditoriaOC, GridTypeEnums.HGTGridTypeEnum.Abastecimiento, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 
@@ -112,7 +113,7 @@ public class ProvisionController : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.VistaFinanzasOC);
-        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.VistaFinanzasOC, GriTypeEnums.HGTGridTypeEnum.Abastecimiento, page, pagSize, month, year);
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.VistaFinanzasOC, GridTypeEnums.HGTGridTypeEnum.Abastecimiento, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 
@@ -140,7 +141,7 @@ public class ProvisionController : HGTController
         int? pagSize = null)
     {
         var gridSettings = _gridSettings.FirstOrDefault(f => f.HGTGridName == GridEnums.HGTGridEnum.VistaFinanzasSC);
-        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.VistaFinanzasSC, GriTypeEnums.HGTGridTypeEnum.Abastecimiento, page, pagSize, month, year);
+        var query = new GridDataOnlyGetQuery(User, typeFilter, gridSettings, GridEnums.HGTGridEnum.VistaFinanzasSC, GridTypeEnums.HGTGridTypeEnum.Abastecimiento, page, pagSize, month, year);
         return await ExecuteHandler<GridDataOnlyGetQuery, ResultDataGridModel>(query, HttpStatusCode.OK, cancellationToken);
     }
 }
