@@ -6,10 +6,10 @@ using System.Runtime.CompilerServices;
 
 namespace HGT.EAM.WebServices.Infrastructure.Architecture.Controller;
 
-public class HGTController(IMediator mediator, ILogger<HGTController> logger) : ControllerBase
+public class HGTController(IMediator mediator, ILogger logger) : ControllerBase
 {
     private readonly IMediator _mediator = mediator;
-    private readonly ILogger<HGTController> _logger = logger;
+    private readonly ILogger _logger = logger;
 
     protected async Task<IActionResult> ExecuteHandler<TRequest, TResponse>(
         TRequest request,

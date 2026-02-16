@@ -9,13 +9,9 @@ namespace HGT.EAM.WebServices.Infrastructure.Architecture.GridCache;
 [Table("GridCacheFields")]
 public class GridCacheFieldEntity
 {
-    [Key]
-    [Column(Order = 0)]
     [MaxLength(64)]
     public string CacheKey { get; set; } = string.Empty;
 
-    [Key]
-    [Column(Order = 1)]
     public int Id { get; set; }
 
     [MaxLength(256)]

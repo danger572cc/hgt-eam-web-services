@@ -19,12 +19,12 @@ public class GridCacheDbContext : DbContext
 
         modelBuilder.Entity<GridCacheFieldEntity>(e =>
         {
-            e.HasIndex(x => x.CacheKey);
+            e.HasKey(x => new { x.CacheKey, x.Id });
         });
 
         modelBuilder.Entity<GridCacheRowEntity>(e =>
         {
-            e.HasIndex(x => x.CacheKey);
+            e.HasKey(x => new { x.CacheKey, x.RowIndex });
         });
     }
 }

@@ -34,12 +34,36 @@ public interface IGridCacheService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Guarda el resultado completo del grid en SQLite para poder paginar después desde caché.
+    /// Inicia una sesión de guardado en caché, limpiando datos previos y estableciendo metadatos.
     /// </summary>
-    Task SaveFullGridAsync(
+    Task BeginCacheSessionAsync(
         string cacheKey,
         int totalCount,
         List<Field> fields,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Agrega un lote de filas al caché existente.
+    /// </summary>
+    Task AppendCacheRowsAsync(
+        string cacheKey,
         IReadOnlyList<Dictionary<string, object>> rows,
+        int startIndex,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Obtiene el número total de filas cacheadas para una clave específica.
+    /// Útil para validar integridad de datos después del fetch.
+    /// </summary>
+    Task<int> GetCachedRowCountAsync(
+        string cacheKey,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Elimina todos los datos de caché para una sesión específica.
+    /// Se utiliza para rollback en caso de errores durante el fetch.
+    /// </summary>
+    Task RollbackCacheSessionAsync(
+        string cacheKey,
         CancellationToken cancellationToken = default);
 }

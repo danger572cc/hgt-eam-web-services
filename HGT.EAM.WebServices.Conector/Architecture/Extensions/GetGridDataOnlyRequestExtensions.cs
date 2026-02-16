@@ -8,14 +8,16 @@ public static class GetGridDataOnlyRequestExtensions
         string organization, 
         string username, 
         string password, 
-        int gridId, 
-        string gridName, 
+        int gridId,
+        string gridName,
         string functionName,
         int dataSpyId,
         List<DateTime> dateRanges,
         string fieldFilter = "",
         int cursorPosition = 0,
-        int numberOfRows = 2000) 
+        int numberOfRows = 2000,
+        string sessionScrenario = "start",
+        string sessionId = "")
     {
         var authentication = new UsernameToken()
         {
@@ -52,6 +54,19 @@ public static class GetGridDataOnlyRequestExtensions
                 }
             }
         };
+        //Se establece el escenario de la sesión para evitar problemas con el cache del grid
+        if (!string.IsNullOrEmpty(sessionScrenario))
+        {
+            request.SessionScenario = sessionScrenario;
+        }
+        //Se establece el id de la sesión para evitar problemas con el cache del grid
+        if (!string.IsNullOrEmpty(sessionId) && sessionScrenario == "continue")
+        {
+            request.Session = new SessionType
+            {
+                sessionId = sessionId
+            };
+        }
         //filtro por rango
         if (!string.IsNullOrEmpty(fieldFilter) && dateRanges?.Count > 0) 
         {

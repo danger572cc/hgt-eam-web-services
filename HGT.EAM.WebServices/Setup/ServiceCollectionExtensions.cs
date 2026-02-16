@@ -15,10 +15,10 @@ public static class ServiceCollectionExtensions
         if (!gridSettings.Exists())
             throw new InvalidOperationException("EAMGrids configuration section is missing.");
 
-        List<EAMGridSettings> allGrids = configuration.GetSection("EAMGrids").Get<List<EAMGridSettings>>();
-
-        if (allGrids?.Count == 0)
-            throw new InvalidOperationException("EAMGrids configuration section is empty.");
+        var allGrids = configuration.GetSection("EAMGrids").Get<List<EAMGridSettings>>();
+        
+        if (allGrids == null || allGrids.Count == 0)
+            throw new InvalidOperationException("EAMGrids configuration section is missing or empty.");
         services.AddSingleton(allGrids);
         services.AddScoped<IEAMGridService, EAMGridService>();
 
@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString("GridCache") ?? "Data Source=gridcache.db";
         services.AddDbContext<GridCacheDbContext>(options => options.UseSqlite(connectionString));
         services.AddScoped<IGridCacheService, GridCacheService>();
+        services.AddScoped<IEamGridFetcher, EamGridFetcher>();
 
         return services;
     }

@@ -422,3 +422,4 @@ Deploy.rar
 /HGT.EAM.WebServices/appsettings.Production.json
 docs
 HGT.EAM.WebServices/appsettings.Development.backup
+HGT.EAM.WebServices/gridcache.db

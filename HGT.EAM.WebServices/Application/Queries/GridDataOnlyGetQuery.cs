@@ -7,9 +7,11 @@ using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.ApiFilterEnum
 using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GridEnums;
 using static HGT.EAM.WebServices.Infrastructure.Architecture.Enums.GridTypeEnums;
 
+using Mediator;
+
 namespace HGT.EAM.WebServices.Application.Queries;
 
-public class GridDataOnlyGetQuery : IQuery<ResultDataGridModel>
+public class GridDataOnlyGetQuery : IRequest<ResultDataGridModel>
 {
     public GridDataOnlyGetQuery(
         ClaimsPrincipal userInfo, 
@@ -27,7 +29,7 @@ public class GridDataOnlyGetQuery : IQuery<ResultDataGridModel>
 
         Username = string.Empty + userInfo?.Identity?.Name;
         Password = userInfo?.Claims.FirstOrDefault(i => i.Type == "Password")?.Value;
-        Organization = userInfo?.Claims.FirstOrDefault(i => i.Type == "Organization")?.Value;
+        Organization = userInfo?.Claims.FirstOrDefault(i => i.Type == "Organization")?.Value ?? string.Empty;
         FunctionName = gridConfiguration.UserFunction;
         GridName = gridConfiguration.GridName;
         GridId = gridConfiguration.GridId;
@@ -56,15 +58,15 @@ public class GridDataOnlyGetQuery : IQuery<ResultDataGridModel>
         }
     }
 
-    public string Organization { get; private set; }
+    public string Organization { get; private set; } = string.Empty;
 
-    public string Username { get; private set;}
+    public string Username { get; private set; } = string.Empty;
 
-    public string Password { get; private set; }
+    public string? Password { get; private set; }
 
-    public string GridName { get; private set; }
+    public string GridName { get; private set; } = string.Empty;
 
-    public string FunctionName { get; private set; }
+    public string FunctionName { get; private set; } = string.Empty;
 
     public int DataspyId { get; private set; }
 
@@ -74,7 +76,7 @@ public class GridDataOnlyGetQuery : IQuery<ResultDataGridModel>
 
     public int NumberOfRowsFirstReturned { get; private set; }
 
-    public string FilterField { get; private set; }
+    public string FilterField { get; private set; } = string.Empty;
 
     public DateTime? StartDate { get; private set; }
 

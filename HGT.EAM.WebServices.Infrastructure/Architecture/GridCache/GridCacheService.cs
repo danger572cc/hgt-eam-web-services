@@ -112,15 +112,13 @@ public class GridCacheService : IGridCacheService
         };
     }
 
-    public async Task SaveFullGridAsync(
+    public async Task BeginCacheSessionAsync(
         string cacheKey,
         int totalCount,
         List<Field> fields,
-        IReadOnlyList<Dictionary<string, object>> rows,
         CancellationToken cancellationToken = default)
     {
-        if (!_options.Enabled)
-            return;
+        if (!_options.Enabled) return;
 
         await RemoveCacheAsync(cacheKey, cancellationToken);
 
@@ -149,18 +147,49 @@ public class GridCacheService : IGridCacheService
             });
         }
 
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task AppendCacheRowsAsync(
+        string cacheKey,
+        IReadOnlyList<Dictionary<string, object>> rows,
+        int startIndex,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_options.Enabled) return;
+
         for (var i = 0; i < rows.Count; i++)
         {
             _db.GridCacheRows.Add(new GridCacheRowEntity
             {
                 CacheKey = cacheKey,
-                RowIndex = i,
+                RowIndex = startIndex + i,
                 RowData = SerializeRow(rows[i])
             });
         }
 
         await _db.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("Grid cache saved: key={CacheKey}, totalCount={TotalCount}, rowsStored={Rows}", cacheKey, totalCount, rows.Count);
+    }
+
+    public async Task<int> GetCachedRowCountAsync(
+        string cacheKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_options.Enabled) return 0;
+
+        return await _db.GridCacheRows
+            .Where(r => r.CacheKey == cacheKey)
+            .CountAsync(cancellationToken);
+    }
+
+    public async Task RollbackCacheSessionAsync(
+        string cacheKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_options.Enabled) return;
+
+        _logger.LogWarning("Rolling back cache session for key {CacheKey}", cacheKey);
+        await RemoveCacheAsync(cacheKey, cancellationToken);
     }
 
     private async Task RemoveCacheAsync(string cacheKey, CancellationToken cancellationToken)
@@ -189,8 +218,10 @@ public class GridCacheService : IGridCacheService
                 result[k] = JsonElementToObject(v);
             return result;
         }
-        catch
+        catch(Exception ex)
         {
+             // Log error silently? Ideally we should inject logger here or handle upstream
+             // For now, keeping original behavior but safer
             return null;
         }
     }

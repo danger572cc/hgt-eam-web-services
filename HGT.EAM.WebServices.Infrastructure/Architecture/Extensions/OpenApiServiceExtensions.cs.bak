@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using System.Reflection;
+using System.IO;
 
 namespace HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 
@@ -11,9 +13,13 @@ public static class OpenApiServiceExtensions
     {
         var enableSchemeAuthScalar = !configuration.GetSection("EnableAuthScheme").Exists() ? false : configuration.GetSection("EnableAuthScheme").Get<bool>();
         
-        if (!enableSchemeAuthScalar)
+        Action<OpenApiOptions> configureOpenApi = options =>
         {
-            services.AddOpenApi(options =>
+            if (enableSchemeAuthScalar)
+            {
+                options.AddDocumentTransformer<BasicSecuritySchemeTransformer>();
+            }
+            else
             {
                 options.AddDocumentTransformer((document, context, _) =>
                 {
@@ -22,51 +28,51 @@ public static class OpenApiServiceExtensions
                         Title = configuration.GetSection("ApiTitle").Value,
                         Description = configuration.GetSection("ApiDescription").Value
                     };
-
-                    document.ApplyParameterDescriptions();
-
                     return Task.CompletedTask;
                 });
-            });
-        }
-        else 
-        {
-            services.AddOpenApi(options =>
+            }
+
+            var xmlFile = "HGT.EAM.WebServices.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            if (File.Exists(xmlPath))
             {
-                options.AddDocumentTransformer<BasicSecuritySchemeTransformer>();
-            });
-        }
-
-        return services;
-    }
-
-    /// <summary>
-    /// Aplica las descripciones manuales a los parámetros conocidos del documento OpenAPI.
-    /// </summary>
-    internal static void ApplyParameterDescriptions(this OpenApiDocument document)
-    {
-        var parameterDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "TypeFilter", "Tipo de filtro: 1 = dia anterior, 2 = Mes anterior, 3 = Mes actual, 4 = Año anterior, 5 = Mes y año en concreto" },
-            { "Month", "Mes en concreto a buscar, el rango de valores válidos es: 1-12" },
-            { "Year", "Año en concreto, valores validos a partir del año anterior" },
-            { "Page", "Número de página, se inicia con 1" },
-            { "PageSize", "Número de registros a obtener." }
+                options.AddSchemaTransformer(new XmlCommentsSchemaTransformer(xmlPath));
+            }
         };
 
-        foreach (var path in document.Paths)
+        services.AddOpenApi(configureOpenApi);
+        return services;
+    }
+}
+
+internal sealed class XmlCommentsSchemaTransformer(string xmlPath) : ISchemaTransformer
+{
+    private readonly System.Xml.Linq.XDocument _xmlDoc = System.Xml.Linq.XDocument.Load(xmlPath);
+
+    public Task TransformAsync(OpenApiSchema schema, OpenApiSchemaTransformerContext context, CancellationToken cancellationToken)
+    {
+        if (context.JsonTypeInfo.Type.IsClass && context.JsonTypeInfo.Type != typeof(string))
         {
-            foreach (var operation in path.Value.Operations)
+            foreach (var property in schema.Properties)
             {
-                foreach (var parameter in operation.Value.Parameters)
+                var propName = property.Key;
+                // Intentar encontrar el miembro en el XML
+                // Formato: P:Namespace.ClassName.PropertyName
+                var memberName = $"P:{context.JsonTypeInfo.Type.FullName}.{propName}";
+                var member = _xmlDoc.Descendants("member")
+                    .FirstOrDefault(m => m.Attribute("name")?.Value.Equals(memberName, StringComparison.OrdinalIgnoreCase) == true);
+
+                if (member != null)
                 {
-                    if (parameterDescriptions.TryGetValue(parameter.Name, out var description))
+                    var summary = member.Element("summary")?.Value.Trim();
+                    if (!string.IsNullOrEmpty(summary))
                     {
-                        parameter.Description = description;
+                        property.Value.Description = summary;
                     }
                 }
             }
         }
+        return Task.CompletedTask;
     }
 }
 
@@ -82,9 +88,6 @@ internal sealed class BasicSecuritySchemeTransformer(
             Title = settings?.GetSection("ApiTitle").Value,
             Description = settings?.GetSection("ApiDescription").Value
         };
-
-        document.ApplyParameterDescriptions();
-
         var authenticationSchemes = await authenticationSchemeProvider.GetAllSchemesAsync();
 
         if (authenticationSchemes.Any(authScheme => authScheme.Name == "Basic"))
@@ -102,7 +105,7 @@ internal sealed class BasicSecuritySchemeTransformer(
                     In = ParameterLocation.Header,
                     Description = "Basic Authorization header using the Bearer scheme.",
                 });
-            }
+             }
 
             document.SecurityRequirements.Add(new OpenApiSecurityRequirement
             {

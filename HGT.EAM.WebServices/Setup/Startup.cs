@@ -1,14 +1,11 @@
 using HGT.EAM.WebServices.Application.Mapper;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
-using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 using HGT.EAM.WebServices.Infrastructure.Architecture.GridCache;
+using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
 using Mapster;
-using Microsoft.AspNetCore.RateLimiting;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
-using System.Net;
-using System.Reflection;
 using System.Threading.RateLimiting;
 
 namespace HGT.EAM.WebServices.Setup;
@@ -96,8 +93,7 @@ public class Startup(IConfiguration configuration)
             options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
             {
                 diagnosticContext.Set("RequestPath", httpContext.Request.Path.Value ?? string.Empty);
-                string? user = httpContext.User?.Identity?.IsAuthenticated == true ? httpContext.User.Identity.Name
-                    : "Anonymous";
+                string user = (httpContext.User?.Identity?.IsAuthenticated == true ? httpContext.User.Identity.Name : null) ?? "Anonymous";
                 diagnosticContext.Set("CurrentUser", user);
             };
         });
@@ -177,12 +173,7 @@ public class Startup(IConfiguration configuration)
         services.AddConfigOpenApi(configuration);
         services.AddMapster();
         MapsterConfig.Configure();
-        services.AddMediator((Mediator.MediatorOptions options) =>
-        {
-            options.ServiceLifetime = ServiceLifetime.Singleton;
-            options.GenerateTypesAsInternal = true;
-            options.Assemblies = [Assembly.GetExecutingAssembly()];
-        });
+        services.AddMediator();
         services.AddMemoryCache();
         services.AddResponseCaching();
     }
