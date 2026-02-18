@@ -55,6 +55,7 @@ public class GridCacheService : IGridCacheService
     {
         if (!_options.Enabled) return;
 
+        _db.ChangeTracker.Clear();
         await RemoveCacheAsync(cacheKey, cancellationToken);
 
         var entry = new GridCacheEntry
@@ -199,11 +200,15 @@ public class GridCacheService : IGridCacheService
     {
         if (!_options.Enabled) return;
         var entry = await _db.GridCacheEntries
+            .AsNoTracking()
             .FirstOrDefaultAsync(e => e.CacheKey == cacheKey, cancellationToken);
         if (entry != null)
         {
-            entry.TotalCount = totalCount;
-            await _db.SaveChangesAsync(cancellationToken);
+            await _db.GridCacheEntries
+                .Where(e => e.CacheKey == cacheKey)
+                .ExecuteUpdateAsync(
+                    setters => setters.SetProperty(e => e.TotalCount, totalCount),
+                    cancellationToken);
         }
     }
 

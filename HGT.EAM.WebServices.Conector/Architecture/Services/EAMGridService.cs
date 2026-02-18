@@ -79,7 +79,7 @@ public class EAMGridService : IEAMGridService, IDisposable
     {
         _logger.LogInformation("Request trace: {NewLine} {XML}", Environment.NewLine, request.GetStringXML());
         var response = await _gridCacheService.GetGridDataOnlyCacheOpAsync(request);
-        _logger.LogInformation("Request response:  {NewLine} {XML}", Environment.NewLine, response.GetStringXML());
+        _logger.LogInformation("Request response: {NewLine} {XML}", Environment.NewLine, response.GetStringXML());
         //resultados
         var rows = response.MP0117_GetGridDataOnlyCache_001_Result.GRIDRESULT;
         return rows;

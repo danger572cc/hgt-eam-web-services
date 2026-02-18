@@ -423,3 +423,4 @@ Deploy.rar
 docs
 HGT.EAM.WebServices/appsettings.Development.backup
 HGT.EAM.WebServices/gridcache.db
+/HGT.EAM.WebServices/appsettings.Stage.json

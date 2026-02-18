@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
 
         services.Configure<GridCacheOptions>(configuration.GetSection(GridCacheOptions.SectionName));
         var connectionString = configuration.GetConnectionString("GridCache") ?? "Data Source=gridcache.db";
-        services.AddDbContext<GridCacheDbContext>(options => options.UseSqlite(connectionString));
+        services.AddDbContext<GridCacheDbContext>(options => options.UseSqlite(connectionString), ServiceLifetime.Scoped);
         services.AddScoped<IGridCacheService, GridCacheService>();
         services.AddScoped<IEamGridFetcher, EamGridFetcher>();
 

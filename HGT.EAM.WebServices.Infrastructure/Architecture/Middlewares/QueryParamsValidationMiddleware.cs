@@ -57,7 +57,7 @@ public class QueryParamsValidationMiddleware
                     else if (pageNumber > limitMaxRecordSize)
                     {
                         isInvalid = true;
-                        message = "Invalid 'pagSize' query parameter. It must be less or equal than 2000 records.";
+                        message = "Invalid 'pagSize' query parameter. It must be less or equal than 5000 records.";
                     }
                     break;
                 case "month":
