@@ -24,5 +24,5 @@ public class GridRequestParams
 
     [FromQuery]
     [Description("Número de registros a obtener.")]
-    public int? PageSize { get; set; }
+    public int? PagSize { get; set; }
 }

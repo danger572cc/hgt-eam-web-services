@@ -41,7 +41,7 @@ public class EAMGridService : IEAMGridService, IDisposable
         // certificados
         var authSecure = new X509ServiceCertificateAuthentication
         {
-            CertificateValidationMode = X509CertificateValidationMode.ChainTrust,
+            CertificateValidationMode = X509CertificateValidationMode.None,
             RevocationMode = X509RevocationMode.NoCheck, // Cambia a Online si tienes acceso total a internet
             TrustedStoreLocation = StoreLocation.LocalMachine
         };

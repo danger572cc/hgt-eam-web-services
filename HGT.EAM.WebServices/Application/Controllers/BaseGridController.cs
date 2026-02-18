@@ -41,7 +41,7 @@ public abstract class BaseGridController : HGTController
             gridName,
             gridType,
             request.Page,
-            request.PageSize,
+            request.PagSize,
             request.Month,
             request.Year);
 

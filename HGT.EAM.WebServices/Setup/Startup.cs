@@ -173,7 +173,10 @@ public class Startup(IConfiguration configuration)
         services.AddConfigOpenApi(configuration);
         services.AddMapster();
         MapsterConfig.Configure();
-        services.AddMediator();
+        services.AddMediator(options =>
+        {
+            options.ServiceLifetime = ServiceLifetime.Scoped;
+        });
         services.AddMemoryCache();
         services.AddResponseCaching();
     }
