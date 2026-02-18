@@ -36,14 +36,14 @@ public class GridDataOnlyGetQueryHandler : IRequestHandler<GridDataOnlyGetQuery,
         var page = command.Page > 0 ? command.Page : 1;
         var pageSize = command.NumberOfRowsFirstReturned;
 
-        // 1. Try Cache
+        // 1. Intentar obtener de la caché
         var cached = await _cache.GetPageAsync(cacheKey, page, pageSize, cancellationToken);
-        if (cached != null) 
+        if (cached != null)
         {
             return cached;
         }
 
-        // 2. Fetch & Cache (Streamed)
+        // 2. Recuperar y almacenar en caché (vía Streaming/Flujo)
         var (totalRows, fields) = await _fetcher.FetchAndCacheAsync(
             cacheKey,
             command.Username,
@@ -59,19 +59,18 @@ public class GridDataOnlyGetQueryHandler : IRequestHandler<GridDataOnlyGetQuery,
             pageSize,
             cancellationToken);
 
-        // 3. Return from Cache (guaranteed to be there now)
-        // Note: In the previous implementation we optimized by capturing the page rows in memory during fetch.
-        // To strictly separate responsibilities, we can re-query the cache. 
-        // SQLite is fast enough for this "Read-Your-Writes" pattern on a single page.
-        // It keeps the handler logic pure: Check Cache -> Miss -> Fill Cache -> Read Cache.
-        
+        // 3. Retornar desde la caché (ahora está garantizado que los datos se encuentran allí)
+        // Para separar estrictamente las responsabilidades, podemos volver a consultar la caché. 
+        // SQLite es lo suficientemente rápido para este patrón de "Leer lo que escribes" (Read-Your-Writes) en una sola página.
+        // Esto mantiene la lógica del manejador pura: Comprobar Caché -> Error de lectura -> Llenar Caché -> Leer Caché.
+
         var freshResult = await _cache.GetPageAsync(cacheKey, page, pageSize, cancellationToken);
-        if (freshResult != null) 
+        if (freshResult != null)
         {
             return freshResult;
         }
 
-        // Fallback (should not happen if fetch worked)
+        // Plan de respaldo (no debería ocurrir si la descarga funcionó correctamente)
         var totalPages = (int)Math.Ceiling((double)totalRows / pageSize);
         return new ResultDataGridModel
         {

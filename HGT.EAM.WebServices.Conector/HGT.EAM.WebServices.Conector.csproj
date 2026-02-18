@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <Compile Remove="HGT\**" />
     <Compile Remove="web-services-definition\**" />
+    <EmbeddedResource Remove="HGT\**" />
     <EmbeddedResource Remove="web-services-definition\**" />
+    <None Remove="HGT\**" />
     <None Remove="web-services-definition\**" />
   </ItemGroup>
   <ItemGroup>

@@ -9,7 +9,7 @@ public interface IEamGridFetcher
         string username,
         string organization,
         string? password,
-        int gridId,
+        long gridId,
         string gridName,
         string functionName,
         int dataspyId,

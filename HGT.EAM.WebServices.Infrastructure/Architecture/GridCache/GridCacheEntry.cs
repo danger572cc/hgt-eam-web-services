@@ -11,12 +11,12 @@ public class GridCacheEntry
     [MaxLength(64)]
     public string CacheKey { get; set; } = string.Empty;
 
-    public int GridId { get; set; }
+    public long GridId { get; set; }
 
     [MaxLength(256)]
     public string GridName { get; set; } = string.Empty;
 
-    public int TotalCount { get; set; }
+    public int? TotalCount { get; set; }
 
     public DateTime CreatedAt { get; set; }
 }

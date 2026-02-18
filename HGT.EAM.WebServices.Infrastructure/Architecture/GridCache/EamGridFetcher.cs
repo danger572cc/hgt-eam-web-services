@@ -1,4 +1,3 @@
-using EAM.WebServices;
 using HGT.EAM.WebServices.Conector.Architecture.Extensions;
 using HGT.EAM.WebServices.Conector.Architecture.Interfaces;
 using HGT.EAM.WebServices.Conector.Architecture.Models;
@@ -7,6 +6,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
+using DATAROW = EAM.WebServices.DATAROW;
+using EnumsGridCache = EAM.WebServices.GridCache.METADATAMORERECORDPRESENT;
+using EnumsGrid = EAM.WebServices.METADATAMORERECORDPRESENT;
 
 namespace HGT.EAM.WebServices.Infrastructure.Architecture.GridCache;
 
@@ -40,7 +42,7 @@ public class EamGridFetcher : IEamGridFetcher
                 OnRetry = args =>
                 {
                     _logger.LogWarning(
-                        "Retry attempt {AttemptNumber} after {Delay}ms due to: {Exception}",
+                        "Reintento {AttemptNumber} después de {Delay}ms debido a: {Exception}",
                         args.AttemptNumber,
                         args.RetryDelay.TotalMilliseconds,
                         args.Outcome.Exception?.Message ?? "Unknown error");
@@ -55,7 +57,7 @@ public class EamGridFetcher : IEamGridFetcher
         string username,
         string organization,
         string? password,
-        int gridId,
+        long gridId,
         string gridName,
         string functionName,
         int dataspyId,
@@ -77,84 +79,114 @@ public class EamGridFetcher : IEamGridFetcher
 
         try
         {
-            // Paso 1: Obtener metadata (header) con retry
-            var headRequest = GetGridDataOnlyRequestExtensions.GetObject(organization, username, password ?? string.Empty, gridId, gridName, functionName, dataspyId, dateRanges, filterField, 0, pageSize);
-            
-            var (totalRows, fieldsEam) = await _retryPipeline.ExecuteAsync(async ct => 
-                await gridService.GetHeadGridAsync(headRequest), cancellationToken);
-            
-            var fields = _mapper.Map<List<Field>>(fieldsEam);
-
-            _logger.LogInformation(
-                "Starting grid fetch for {GridName}: Total rows = {TotalRows}, PageSize = {PageSize}",
-                gridName, totalRows, pageSize);
-
-            // Paso 2: Iniciar sesión de caché
-            await _cache.BeginCacheSessionAsync(cacheKey, totalRows, fields, cancellationToken);
-
-            // Paso 3: Loop para obtener TODOS los datos con logging de progreso
             var cursorPosition = 1;
             var totalFetched = 0;
             var batchNumber = 0;
+            string? sessionId = null;
+            string? moreRecordsPresent;
+            List<Field>? fields = null;
 
-            while (true)
+            // Construir el request base MP0116 - se reutiliza como plantilla para MP0117
+            var mainRequest = GetGridDataOnlyRequestExtensions.GetRequestObject(
+                organization, username, password ?? string.Empty,
+                gridId, gridName, functionName,
+                dataspyId, dateRanges, filterField,
+                cursorPosition, pageSize);
+
+            do
             {
                 batchNumber++;
-                
-                // Fetch batch con retry policy
-                var dataRequest = GetGridDataOnlyRequestExtensions.GetObject(organization, username, password ?? string.Empty, gridId, gridName, functionName, dataspyId, dateRanges, filterField, cursorPosition, pageSize);
-                
-                var response = await _retryPipeline.ExecuteAsync(async ct => 
-                    await gridService.GetGridRowsAsync(dataRequest), cancellationToken);
-                
-                var rows = response.GRID.DATA != null
-                    ? response.GRID.DATA.Items.ConvertToType<List<DATAROW>>().GetDTORows(fields)
-                    : [];
+
+                List<Dictionary<string, object>> rows;
+
+                if (batchNumber == 1)
+                {
+                    // Primera llamada: MP0116 obtener campos.
+                    var fieldsResponse = await _retryPipeline.ExecuteAsync(async ct =>
+                        await gridService.GetHeadGridAsync(mainRequest), cancellationToken);
+
+                    // Segunda llamada: MP0116 con SessionScenario="start" 
+                    var (capturedSessionId, result) = await _retryPipeline.ExecuteAsync(async ct =>
+                        await gridService.GetGridRowsAsync(mainRequest), cancellationToken);
+                    sessionId = capturedSessionId;
+
+                    // Extraer fields y registros de la primera respuesta
+                    var fieldsEam = fieldsResponse ?? [];
+                    fields = _mapper.Map<List<Field>>(fieldsEam);
+
+                    rows = result.GRID.DATA != null
+                        ? result.GRID.DATA.Items.ConvertToType<List<DATAROW>>().GetDTORows(fields)
+                        : [];
+
+                    _logger.LogInformation(
+                        "Grilla {GridName}: Primer lote -  cantidad de registros obtenidos = {RowFetched}, SessionID = {SessionId}",
+                        gridName, rows.Count, sessionId);
+
+                    await _cache.BeginCacheSessionAsync(cacheKey, fields, gridId, gridName, cancellationToken);
+                    moreRecordsPresent = result.GRID.METADATA?.MORERECORDPRESENT == EnumsGrid.Item ? "+" : "-";
+                    cursorPosition = int.Parse(result.GRID.METADATA?.CURRENTCURSORPOSITION ?? "0") + 1;
+                }
+                else
+                {
+                    // LLAMADAS SUBSECUENTES: MP0117 con SessionScenario="continue"
+                    // GetCacheRequestObject reutiliza mainRequest como plantilla
+                    var cacheRequest = GetGridDataOnlyRequestExtensions.GetCacheRequestObject(
+                        username, password ?? string.Empty,
+                        mainRequest,
+                        sessionId!,
+                        cursorPosition);
+
+                    var cacheResult = await _retryPipeline.ExecuteAsync(async ct =>
+                        await gridService.GetGridCacheRowsAsync(cacheRequest), cancellationToken);
+
+                    rows = cacheResult.GRID.DATA != null
+                        ? cacheResult.GRID.DATA.Items.ConvertToType<List<DATAROW>>().GetDTORows(fields!)
+                        : [];
+
+                    moreRecordsPresent = cacheResult.GRID.METADATA?.MORERECORDPRESENT == EnumsGridCache.Item ? "+" : "-";
+                    cursorPosition = int.Parse(cacheResult.GRID.METADATA?.CURRENTCURSORPOSITION ?? "0") + 1;
+
+                    _logger.LogInformation(
+                        "Grilla {GridName}: Lote {BatchNumber} - MP0117, Cursor = {Cursor}",
+                        gridName, batchNumber, cursorPosition);
+                }
 
                 if (rows.Count > 0)
                 {
-                    await _cache.AppendCacheRowsAsync(cacheKey, rows, cursorPosition - 1, cancellationToken);
+                    await _cache.AppendCacheRowsAsync(cacheKey, rows, totalFetched, cancellationToken);
                     totalFetched += rows.Count;
-
-                    // Logging de progreso
-                    _logger.LogInformation(
-                        "Grid {GridName}: Fetched batch {BatchNumber} -> {Current}/{Total} records ({Percentage:F1}%)",
-                        gridName, batchNumber, totalFetched, totalRows, 
-                        (totalFetched / (double)totalRows) * 100);
                 }
 
-                if (rows.Count < pageSize)
-                    break;
+            } while (moreRecordsPresent == "+"); // METADATAMORERECORDPRESENT = '+'
 
-                cursorPosition += rows.Count;
-            }
+            // Actualizo los registros totales.
+            await _cache.UpdateTotalCountAsync(cacheKey, totalFetched, cancellationToken);
 
-            // Paso 4: Validar integridad de datos
+            // Validar integridad - usamos totalFetched (real) no totalRows (puede ser aproximado)
             var cachedCount = await _cache.GetCachedRowCountAsync(cacheKey, cancellationToken);
-            
-            if (cachedCount != totalRows)
+
+            if (cachedCount != totalFetched)
             {
                 _logger.LogError(
-                    "Data integrity check FAILED for grid {GridName}: Expected {Expected} rows, but cached {Actual} rows",
-                    gridName, totalRows, cachedCount);
-                
-                // Rollback: eliminar datos parciales
+                    "Verificación de integridad FALLIDA para la grilla {GridName}: Se esperaban {Expected} registros, pero se cachearon {Actual}",
+                    gridName, totalFetched, cachedCount);
+
                 await _cache.RollbackCacheSessionAsync(cacheKey, cancellationToken);
-                
+
                 throw new InvalidOperationException(
-                    $"Data integrity check failed: Expected {totalRows} rows, got {cachedCount} rows. Cache has been rolled back.");
+                    $"Verificación de integridad fallida: Se esperaban {totalFetched} registros, se obtuvieron {cachedCount}. El caché ha sido revertido.");
             }
 
             _logger.LogInformation(
-                "Grid {GridName}: Fetch completed successfully. {TotalRows} rows cached.",
-                gridName, totalRows);
+                "Grilla {GridName}: Carga completada exitosamente. {TotalRows} registros cacheados.",
+                gridName, totalFetched);
 
-            return (totalRows, fields);
+            return (totalFetched, fields!);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, 
-                "Error fetching grid {GridName}. Rolling back cache session for key {CacheKey}",
+                "Error capturando datos del grid {GridName}. Rolling back la sesión de caché con clave {CacheKey}",
                 gridName, cacheKey);
             
             // Rollback en caso de cualquier error
