@@ -33,6 +33,9 @@ public class EAMGridService : IEAMGridService, IDisposable
         binding.Security.Mode = BasicHttpSecurityMode.Transport;
         binding.MaxReceivedMessageSize = 10000000;
         binding.SendTimeout = new TimeSpan(0, 30, 0);
+        binding.ReceiveTimeout = new TimeSpan(0, 30, 0);
+        binding.OpenTimeout = new TimeSpan(0, 5, 0);
+        binding.CloseTimeout = new TimeSpan(0, 5, 0);
         binding.Security.Transport = new HttpTransportSecurity { 
             ClientCredentialType = HttpClientCredentialType.None,
             ProxyCredentialType = HttpProxyCredentialType.Basic

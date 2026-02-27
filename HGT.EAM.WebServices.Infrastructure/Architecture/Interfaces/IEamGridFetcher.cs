@@ -1,6 +1,6 @@
 using HGT.EAM.WebServices.Conector.Architecture.Models;
 
-namespace HGT.EAM.WebServices.Infrastructure.Architecture.GridCache;
+namespace HGT.EAM.WebServices.Infrastructure.Architecture.Interfaces;
 
 public interface IEamGridFetcher
 {

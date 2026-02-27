@@ -40,6 +40,12 @@ public class ResultDataGridModel
     [JsonPropertyName("currentPage")]
     public required int CurrentPage { get; set; }
 
+    [JsonPropertyName("gridName")]
+    public required string GridName { get; set; }
+
+    [JsonPropertyName("gridId")]
+    public required long GridId { get; set; }
+
     [JsonPropertyName("totalRecordsReturned")]
     public required int TotalRecordsReturned { get; set; }
 

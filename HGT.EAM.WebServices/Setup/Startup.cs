@@ -12,8 +12,6 @@ namespace HGT.EAM.WebServices.Setup;
 
 public class Startup(IConfiguration configuration)
 {
-    private readonly IConfiguration _configuration = configuration;
-
     public void Configure(WebApplication app)
     {
         using (var scope = app.Services.CreateScope())

@@ -1,14 +1,15 @@
 using HGT.EAM.WebServices.Conector.Architecture.Extensions;
 using HGT.EAM.WebServices.Conector.Architecture.Interfaces;
 using HGT.EAM.WebServices.Conector.Architecture.Models;
+using HGT.EAM.WebServices.Infrastructure.Architecture.Interfaces;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
 using DATAROW = EAM.WebServices.DATAROW;
-using EnumsGridCache = EAM.WebServices.GridCache.METADATAMORERECORDPRESENT;
 using EnumsGrid = EAM.WebServices.METADATAMORERECORDPRESENT;
+using EnumsGridCache = EAM.WebServices.GridCache.METADATAMORERECORDPRESENT;
 
 namespace HGT.EAM.WebServices.Infrastructure.Architecture.GridCache;
 
@@ -19,6 +20,12 @@ public class EamGridFetcher : IEamGridFetcher
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<EamGridFetcher> _logger;
     private readonly ResiliencePipeline _retryPipeline;
+
+    // Ajustar según el caso: 2000, 5000, o 10000
+    private const int BATCH_SIZE_FOR_CACHE = 5000;
+
+    // Delay después del primer MP0116 para dar tiempo a que la sesión se active
+    private const int SESSION_ACTIVATION_DELAY_MS = 300;
 
     public EamGridFetcher(
         IGridCacheService cache,
@@ -31,7 +38,6 @@ public class EamGridFetcher : IEamGridFetcher
         _scopeFactory = scopeFactory;
         _logger = logger;
 
-        // Configurar Polly retry policy con backoff exponencial
         _retryPipeline = new ResiliencePipelineBuilder()
             .AddRetry(new RetryStrategyOptions
             {
@@ -39,13 +45,19 @@ public class EamGridFetcher : IEamGridFetcher
                 Delay = TimeSpan.FromSeconds(1),
                 BackoffType = DelayBackoffType.Exponential,
                 UseJitter = true,
+                // No reintentar errores semánticos del servidor EAM (FaultException)
+                // ni cancelaciones: sólo errores transitorios de red/timeout.
+                ShouldHandle = new PredicateBuilder()
+                    .Handle<Exception>(ex =>
+                        ex is not System.ServiceModel.FaultException &&
+                        ex is not OperationCanceledException),
                 OnRetry = args =>
                 {
                     _logger.LogWarning(
                         "Reintento {AttemptNumber} después de {Delay}ms debido a: {Exception}",
                         args.AttemptNumber,
                         args.RetryDelay.TotalMilliseconds,
-                        args.Outcome.Exception?.Message ?? "Unknown error");
+                        args.Outcome.Exception?.Message ?? "Error desconocido");
                     return ValueTask.CompletedTask;
                 }
             })
@@ -86,7 +98,10 @@ public class EamGridFetcher : IEamGridFetcher
             string? moreRecordsPresent;
             List<Field>? fields = null;
 
-            // Construir el request base MP0116 - se reutiliza como plantilla para MP0117
+            // Buffer temporal para acumular rows antes de guardar
+            var bufferRows = new List<Dictionary<string, object>>();
+            var bufferStartIndex = 0;
+
             var mainRequest = GetGridDataOnlyRequestExtensions.GetRequestObject(
                 organization, username, password ?? string.Empty,
                 gridId, gridName, functionName,
@@ -96,21 +111,24 @@ public class EamGridFetcher : IEamGridFetcher
             do
             {
                 batchNumber++;
-
                 List<Dictionary<string, object>> rows;
 
                 if (batchNumber == 1)
                 {
-                    // Primera llamada: MP0116 obtener campos.
+                    // Primera llamada: obtener campos
                     var fieldsResponse = await _retryPipeline.ExecuteAsync(async ct =>
                         await gridService.GetHeadGridAsync(mainRequest), cancellationToken);
 
                     // Segunda llamada: MP0116 con SessionScenario="start" 
                     var (capturedSessionId, result) = await _retryPipeline.ExecuteAsync(async ct =>
                         await gridService.GetGridRowsAsync(mainRequest), cancellationToken);
+
                     sessionId = capturedSessionId;
 
-                    // Extraer fields y registros de la primera respuesta
+                    // DELAY: Dar tiempo al servidor EAM para activar la sesión
+                    // Esto evita el error "There is no active session" en el primer MP0117.
+                    await Task.Delay(SESSION_ACTIVATION_DELAY_MS);
+
                     var fieldsEam = fieldsResponse ?? [];
                     fields = _mapper.Map<List<Field>>(fieldsEam);
 
@@ -119,17 +137,17 @@ public class EamGridFetcher : IEamGridFetcher
                         : [];
 
                     _logger.LogInformation(
-                        "Grilla {GridName}: Primer lote -  cantidad de registros obtenidos = {RowFetched}, SessionID = {SessionId}",
+                        "Grilla {GridName}: Primer lote - {RowCount} registros obtenidos, SessionID = {SessionId}",
                         gridName, rows.Count, sessionId);
 
                     await _cache.BeginCacheSessionAsync(cacheKey, fields, gridId, gridName, cancellationToken);
+
                     moreRecordsPresent = result.GRID.METADATA?.MORERECORDPRESENT == EnumsGrid.Item ? "+" : "-";
                     cursorPosition = int.Parse(result.GRID.METADATA?.CURRENTCURSORPOSITION ?? "0") + 1;
                 }
                 else
                 {
-                    // LLAMADAS SUBSECUENTES: MP0117 con SessionScenario="continue"
-                    // GetCacheRequestObject reutiliza mainRequest como plantilla
+                    // LLAMADAS SUBSECUENTES: MP0117
                     var cacheRequest = GetGridDataOnlyRequestExtensions.GetCacheRequestObject(
                         username, password ?? string.Empty,
                         mainRequest,
@@ -147,22 +165,44 @@ public class EamGridFetcher : IEamGridFetcher
                     cursorPosition = int.Parse(cacheResult.GRID.METADATA?.CURRENTCURSORPOSITION ?? "0") + 1;
 
                     _logger.LogInformation(
-                        "Grilla {GridName}: Lote {BatchNumber} - MP0117, Cursor = {Cursor}",
-                        gridName, batchNumber, cursorPosition);
+                        "Grilla {GridName}: Lote {BatchNumber} - MP0117, {RowCount} registros",
+                        gridName, batchNumber, rows.Count);
                 }
 
                 if (rows.Count > 0)
                 {
-                    await _cache.AppendCacheRowsAsync(cacheKey, rows, totalFetched, cancellationToken);
+                    bufferRows.AddRange(rows);
                     totalFetched += rows.Count;
+
+                    // Guardar en SQLite cada BATCH_SIZE_FOR_CACHE registros
+                    if (bufferRows.Count >= BATCH_SIZE_FOR_CACHE)
+                    {
+                        _logger.LogInformation(
+                            "Grilla {GridName}: Guardando batch de {BatchCount} registros en caché (total acumulado: {TotalFetched})...",
+                            gridName, bufferRows.Count, totalFetched);
+
+                        await _cache.AppendCacheRowsAsync(cacheKey, bufferRows, bufferStartIndex, cancellationToken);
+
+                        bufferStartIndex += bufferRows.Count;
+                        bufferRows.Clear(); // Liberar memoria
+                    }
                 }
 
-            } while (moreRecordsPresent == "+"); // METADATAMORERECORDPRESENT = '+'
+            } while (moreRecordsPresent == "+");
 
-            // Actualizo los registros totales.
+            // Guardar el último batch (registros sobrantes < BATCH_SIZE_FOR_CACHE)
+            if (bufferRows.Count > 0)
+            {
+                _logger.LogInformation(
+                    "Grilla {GridName}: Guardando último batch de {BatchCount} registros en caché...",
+                    gridName, bufferRows.Count);
+
+                await _cache.AppendCacheRowsAsync(cacheKey, bufferRows, bufferStartIndex, cancellationToken);
+                bufferRows.Clear();
+            }
+
             await _cache.UpdateTotalCountAsync(cacheKey, totalFetched, cancellationToken);
 
-            // Validar integridad - usamos totalFetched (real) no totalRows (puede ser aproximado)
             var cachedCount = await _cache.GetCachedRowCountAsync(cacheKey, cancellationToken);
 
             if (cachedCount != totalFetched)
@@ -181,16 +221,17 @@ public class EamGridFetcher : IEamGridFetcher
                 "Grilla {GridName}: Carga completada exitosamente. {TotalRows} registros cacheados.",
                 gridName, totalFetched);
 
+            // MARCAR CACHÉ COMO COMPLETADO
+            await _cache.CompleteCacheSessionAsync(cacheKey, cancellationToken);
+
             return (totalFetched, fields!);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, 
-                "Error capturando datos del grid {GridName}. Rolling back la sesión de caché con clave {CacheKey}",
+            _logger.LogError(ex,
+                "Error capturando datos del grid {GridName}. Revirtiendo caché con clave {CacheKey}",
                 gridName, cacheKey);
-            
-            // Rollback en caso de cualquier error
-            await _cache.RollbackCacheSessionAsync(cacheKey, cancellationToken);
+            await _cache.RollbackCacheSessionAsync(cacheKey, CancellationToken.None);
             throw;
         }
     }

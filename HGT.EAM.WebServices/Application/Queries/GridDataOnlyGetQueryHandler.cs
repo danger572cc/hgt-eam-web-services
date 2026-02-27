@@ -1,7 +1,6 @@
 using HGT.EAM.WebServices.Conector.Architecture.Interfaces;
 using HGT.EAM.WebServices.Conector.Architecture.Models;
-using HGT.EAM.WebServices.Infrastructure.Architecture.GridCache;
-using HGT.EAM.WebServices.Infrastructure.Architecture.Query;
+using HGT.EAM.WebServices.Infrastructure.Architecture.Interfaces;
 
 using Mediator;
 
@@ -74,6 +73,8 @@ public class GridDataOnlyGetQueryHandler : IRequestHandler<GridDataOnlyGetQuery,
         var totalPages = (int)Math.Ceiling((double)totalRows / pageSize);
         return new ResultDataGridModel
         {
+            GridId = command.GridId,
+            GridName= command.GridName,
             TotalRecords = totalRows,
             TotalPages = totalPages,
             CurrentPage = page,

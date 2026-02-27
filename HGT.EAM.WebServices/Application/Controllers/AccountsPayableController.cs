@@ -67,7 +67,7 @@ public class AccountsPayableController : BaseGridController
         CancellationToken cancellationToken)
     {
         return await ExecuteGridQuery(
-            GridEnums.HGTGridEnum.VistaFinanzasOC,
+            GridEnums.HGTGridEnum.VistaOrdenesDeCompras,
             GridTypeEnums.HGTGridTypeEnum.CuentasPorPagar,
             request,
             cancellationToken);

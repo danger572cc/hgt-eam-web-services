@@ -3,6 +3,7 @@ using HGT.EAM.WebServices.Conector.Architecture.Services;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Models;
 using HGT.EAM.WebServices.Infrastructure.Architecture.GridCache;
 using Microsoft.EntityFrameworkCore;
+using HGT.EAM.WebServices.Infrastructure.Architecture.Interfaces;
 
 namespace HGT.EAM.WebServices.Setup;
 
@@ -23,7 +24,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEAMGridService, EAMGridService>();
 
         services.Configure<GridCacheOptions>(configuration.GetSection(GridCacheOptions.SectionName));
-        var connectionString = configuration.GetConnectionString("GridCache") ?? "Data Source=gridcache.db";
+        // BusyTimeout=30000: SQLite esperará hasta 30s ante un lock de base de datos
+        // en lugar de fallar inmediatamente (útil si dos requests coinciden en cold-start).
+        var baseConnectionString = configuration.GetConnectionString("GridCache") ?? "Data Source=gridcache.db";
+        var connectionString = $"{baseConnectionString}";
         services.AddDbContext<GridCacheDbContext>(options => options.UseSqlite(connectionString), ServiceLifetime.Scoped);
         services.AddScoped<IGridCacheService, GridCacheService>();
         services.AddScoped<IEamGridFetcher, EamGridFetcher>();

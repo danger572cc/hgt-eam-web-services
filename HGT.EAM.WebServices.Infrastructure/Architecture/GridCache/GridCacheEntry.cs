@@ -13,10 +13,19 @@ public class GridCacheEntry
 
     public long GridId { get; set; }
 
-    [MaxLength(256)]
+    [MaxLength(100)]
     public string GridName { get; set; } = string.Empty;
 
     public int? TotalCount { get; set; }
+
+    /// <summary>
+    /// Estado del caché: Pending, Completed, Failed
+    /// Pending = En proceso de carga
+    /// Completed = Carga exitosa, datos válidos
+    /// Failed = Falló durante la carga, debe limpiarse
+    /// </summary>
+    [MaxLength(20)]
+    public string Status { get; set; } = "Pending";
 
     public DateTime CreatedAt { get; set; }
 }

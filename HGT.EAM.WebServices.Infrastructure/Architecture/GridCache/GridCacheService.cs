@@ -33,17 +33,28 @@ public class GridCacheService : IGridCacheService
     {
         if (!_options.Enabled) return;
 
-        for (var i = 0; i < rows.Count; i++)
-        {
-            _db.GridCacheRows.Add(new GridCacheRowEntity
-            {
-                CacheKey = cacheKey,
-                RowIndex = startIndex + i,
-                RowData = SerializeRow(rows[i])
-            });
-        }
+        using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
 
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            for (var i = 0; i < rows.Count; i++)
+            {
+                _db.GridCacheRows.Add(new GridCacheRowEntity
+                {
+                    CacheKey = cacheKey,
+                    RowIndex = startIndex + i,
+                    RowData = SerializeRow(rows[i])
+                });
+            }
+
+            await _db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
     }
 
     public async Task BeginCacheSessionAsync(
@@ -55,17 +66,25 @@ public class GridCacheService : IGridCacheService
     {
         if (!_options.Enabled) return;
 
-        _db.ChangeTracker.Clear();
+        // Limpiar caché previo primero
         await RemoveCacheAsync(cacheKey, cancellationToken);
 
-        var entry = new GridCacheEntry
+        var existing = await _db.GridCacheEntries
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.CacheKey == cacheKey, cancellationToken);
+
+        if (existing == null)
         {
-            CacheKey = cacheKey,
-            GridId = gridId,
-            GridName = gridName,
-            CreatedAt = DateTime.UtcNow
-        };
-        _db.GridCacheEntries.Add(entry);
+            var entry = new GridCacheEntry
+            {
+                CacheKey = cacheKey,
+                GridId = gridId,
+                GridName = gridName,
+                CreatedAt = DateTime.UtcNow,
+                Status = "Pending"
+            };
+            _db.GridCacheEntries.Add(entry);
+        }
 
         foreach (var f in fields)
         {
@@ -83,6 +102,25 @@ public class GridCacheService : IGridCacheService
         }
 
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task CompleteCacheSessionAsync(
+        string cacheKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_options.Enabled) 
+        {
+            return;
+        }
+
+        // Marcar caché como completado
+        await _db.GridCacheEntries
+            .Where(e => e.CacheKey == cacheKey)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(e => e.Status, "Completed"),
+                cancellationToken);
+
+        _logger.LogInformation("Caché marcado como completado para la clave {CacheKey}", cacheKey);
     }
 
     public string ComputeCacheKey(
@@ -108,12 +146,13 @@ public class GridCacheService : IGridCacheService
         if (!_options.Enabled) return 0;
 
         return await _db.GridCacheRows
+            .AsNoTracking()
             .Where(r => r.CacheKey == cacheKey)
             .CountAsync(cancellationToken);
     }
 
     public async Task<ResultDataGridModel?> GetPageAsync(
-            string cacheKey,
+        string cacheKey,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -128,6 +167,17 @@ public class GridCacheService : IGridCacheService
         if (entry == null)
             return null;
 
+        if (entry.Status != "Completed")
+        {
+            _logger.LogWarning(
+                "Caché incompleto detectado para {CacheKey} con estado {Status}. Limpiando...",
+                cacheKey, entry.Status);
+
+            await RemoveCacheAsync(cacheKey, cancellationToken);
+            return null;
+        }
+
+        // Verificar expiración
         if (_options.ExpirationMinutes > 0 && (DateTime.UtcNow - entry.CreatedAt).TotalMinutes > _options.ExpirationMinutes)
         {
             _logger.LogDebug("Grid cache expirado para la clave {CacheKey}", cacheKey);
@@ -168,9 +218,11 @@ public class GridCacheService : IGridCacheService
                 rows.Add(dict);
         }
 
-        var totalPages = (int)Math.Ceiling((double)entry.TotalCount / pageSize);
+        var totalPages = (int)Math.Ceiling((double)entry.TotalCount.GetValueOrDefault() / pageSize);
         return new ResultDataGridModel
         {
+            GridId = entry.GridId,
+            GridName = entry.GridName,
             TotalRecords = entry.TotalCount.GetValueOrDefault(),
             TotalPages = totalPages,
             CurrentPage = page,
@@ -187,7 +239,10 @@ public class GridCacheService : IGridCacheService
         string cacheKey,
         CancellationToken cancellationToken = default)
     {
-        if (!_options.Enabled) return;
+        if (!_options.Enabled) 
+        {
+            return;
+        }
 
         _logger.LogWarning("Rolling back sesión de caché para la clave {CacheKey}", cacheKey);
         await RemoveCacheAsync(cacheKey, cancellationToken);
@@ -198,18 +253,16 @@ public class GridCacheService : IGridCacheService
         int totalCount,
         CancellationToken cancellationToken = default)
     {
-        if (!_options.Enabled) return;
-        var entry = await _db.GridCacheEntries
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.CacheKey == cacheKey, cancellationToken);
-        if (entry != null)
+        if (!_options.Enabled) 
         {
-            await _db.GridCacheEntries
-                .Where(e => e.CacheKey == cacheKey)
-                .ExecuteUpdateAsync(
-                    setters => setters.SetProperty(e => e.TotalCount, totalCount),
-                    cancellationToken);
+            return;
         }
+
+        await _db.GridCacheEntries
+            .Where(e => e.CacheKey == cacheKey)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(e => e.TotalCount, totalCount),
+                cancellationToken);
     }
 
     #region private methods
@@ -224,10 +277,8 @@ public class GridCacheService : IGridCacheService
                 result[k] = JsonElementToObject(v);
             return result;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            // Log error silently? Ideally we should inject logger here or handle upstream
-            // For now, keeping original behavior but safer
             return null;
         }
     }
@@ -248,7 +299,7 @@ public class GridCacheService : IGridCacheService
     private static string SerializeRow(Dictionary<string, object> row)
     {
         var dict = new Dictionary<string, object?>();
-        foreach (var (k, v) in row) 
+        foreach (var (k, v) in row)
         {
             dict[k] = v;
         }
