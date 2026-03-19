@@ -54,7 +54,7 @@ public class GridDataOnlyGetQuery : IRequest<ResultDataGridModel>
             var initDate = new DateTime(year.GetValueOrDefault(), month.GetValueOrDefault(), 1);
             int lastDay = DateTime.DaysInMonth(initDate.Year, initDate.Month);
             StartDate = initDate;
-            EndDate = new DateTime(year.GetValueOrDefault(), month.GetValueOrDefault(), lastDay, 0, 0, 0);
+            EndDate = new DateTime(year.GetValueOrDefault(), month.GetValueOrDefault(), lastDay, 23, 59, 0);
         }
     }
 
