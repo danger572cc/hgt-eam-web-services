@@ -67,7 +67,7 @@ public static class GetGridDataOnlyRequestExtensions
                     ALIAS_NAME = fieldFilter,
                     OPERATOR = Grid.OPERATOR_TYPE.Item4,
                     OPERATORSpecified = true,
-                    VALUE = dateRanges[0].ToString("MM/dd/yyyy HH:mm"),
+                    VALUE = dateRanges[0].ToString("MM/dd/yyyy"),
                     JOINERSpecified = true,
                     JOINER = Grid.AND_OR.AND,
                     SEQNUM = "1"
@@ -75,9 +75,9 @@ public static class GetGridDataOnlyRequestExtensions
                 new Grid.MULTIADDON_FILTERSMADDON_FILTER
                 {
                     ALIAS_NAME = fieldFilter,
-                    OPERATOR = Grid.OPERATOR_TYPE.Item7,
+                    OPERATOR = Grid.OPERATOR_TYPE.Item2,
                     OPERATORSpecified = true,
-                    VALUE = dateRanges[1].ToString("MM/dd/yyyy HH:mm"),
+                    VALUE = dateRanges[1].ToString("MM/dd/yyyy"),
                     JOINERSpecified = false,
                     SEQNUM = "2"
                 }

@@ -51,10 +51,9 @@ public class GridDataOnlyGetQuery : IRequest<ResultDataGridModel>
         if (month != null && year != null)
         {
             FilterField = gridConfiguration.FilterField;
-            var initDate = new DateTime(year.GetValueOrDefault(), month.GetValueOrDefault(), 1);
-            int lastDay = DateTime.DaysInMonth(initDate.Year, initDate.Month);
+            var initDate = new DateTime(year.GetValueOrDefault(), month.GetValueOrDefault(), 1, 0, 0, 0, DateTimeKind.Unspecified);
             StartDate = initDate;
-            EndDate = new DateTime(year.GetValueOrDefault(), month.GetValueOrDefault(), lastDay, 23, 59, 0);
+            EndDate = initDate.AddMonths(1);
         }
     }
 
