@@ -426,3 +426,6 @@ HGT.EAM.WebServices/gridcache.db
 /HGT.EAM.WebServices/appsettings.Stage.json
 *.db-shm
 HGT.EAM.WebServices/gridcache.db-wal
+graphify-out
+CLAUDE.md
+.antigravity
