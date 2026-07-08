@@ -34,6 +34,11 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         var correlationId = GetOrCreateCorrelationId(context);
         var env = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Hosting.IHostingEnvironment>();
         var isDevelopment = env.IsDevelopment();
+        // Al usuario autenticado (mismo usuario de la API) se le devuelve el detalle real del error
+        // —incluida la excepción interna, p. ej. el fallo del proxy hacia EAM— que de otro modo
+        // quedaría enmascarado tras el 500 genérico. Al público anónimo se le sigue ocultando.
+        var isAuthenticated = context.User?.Identity?.IsAuthenticated == true;
+        var showDetail = isDevelopment || isAuthenticated;
 
         // Logging estructurado
         _logger.LogError(ex, "Unhandled exception. CorrelationId: {CorrelationId}, Path: {Path}, User: {User}",
@@ -42,7 +47,9 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             context.User?.Identity?.Name ?? "Anonymous");
 
         int statusCode = 500;
-        string message = isDevelopment ? $"Internal error. Details: {ex.Message}" : "An unexpected error occurred. Please try again later.";
+        string message = showDetail
+            ? $"Internal error. Details: {FlattenExceptionMessage(ex)}"
+            : "An unexpected error occurred. Please try again later.";
         object response;
 
         switch (ex)
@@ -115,12 +122,20 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
                 break;
 
             default:
-                response = new
-                {
-                    statusCode,
-                    message,
-                    correlationId
-                };
+                response = showDetail
+                    ? (object)new
+                    {
+                        statusCode,
+                        message,
+                        correlationId,
+                        exceptionType = ex.GetType().FullName
+                    }
+                    : new
+                    {
+                        statusCode,
+                        message,
+                        correlationId
+                    };
                 break;
         }
 
@@ -135,6 +150,21 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         };
 
         await context.Response.WriteAsync(JsonSerializer.Serialize(response, serializeOptions));
+    }
+
+    private static string FlattenExceptionMessage(Exception ex)
+    {
+        var sb = new System.Text.StringBuilder();
+        Exception? current = ex;
+        var depth = 0;
+        while (current is not null && depth < 6)
+        {
+            if (sb.Length > 0) sb.Append(" -> ");
+            sb.Append(current.GetType().Name).Append(": ").Append(current.Message);
+            current = current.InnerException;
+            depth++;
+        }
+        return sb.ToString();
     }
 
     private static string GetOrCreateCorrelationId(HttpContext context)

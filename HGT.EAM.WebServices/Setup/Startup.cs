@@ -2,6 +2,7 @@ using HGT.EAM.WebServices.Application.Mapper;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Extensions;
 using HGT.EAM.WebServices.Infrastructure.Architecture.GridCache;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Middlewares;
+using HGT.EAM.WebServices.Infrastructure.Architecture.Diagnostics;
 using Mapster;
 using Scalar.AspNetCore;
 using Serilog;
@@ -42,6 +43,7 @@ public class Startup(IConfiguration configuration)
             options.Favicon = "/images/favicon.ico";
             options.HeadContent = @"<div style='position:fixed;top:0;left:0;width:100%;height:4.5%;z-index:100;color:white;background-color: #222A36 !important;'><a href='https://www.aep.cl/'><img src='https://www.aep.cl/wp-content/uploads/2025/07/logoHGT-blanco.png' alt='Hanseatic Global Terminals' style='width: 7%;margin-top: 5px;'></a></div>";
         });
+        app.UseMiddleware<DiagnosticsMetricsMiddleware>();
         app.UseHttpsRedirection();
         app.UseStaticFiles();
         app.UseRouting();
@@ -177,5 +179,9 @@ public class Startup(IConfiguration configuration)
         });
         services.AddMemoryCache();
         services.AddResponseCaching();
+
+        // Panel interno de diagnóstico (/diagnostics): métricas + HttpClient para la sonda a EAM.
+        services.AddSingleton<DiagnosticsMetrics>();
+        services.AddHttpClient();
     }
 }
