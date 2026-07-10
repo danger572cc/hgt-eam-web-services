@@ -29,6 +29,10 @@
     <Content Update="wwwroot\images\favicon.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <!-- Panel de diagnóstico: HTML físico y editable, copiado al publicar. -->
+    <Content Include="Diagnostics\index.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

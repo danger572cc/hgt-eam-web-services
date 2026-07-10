@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HGT Grid API — Diagnóstico</title>
+<style>
+ @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+ :root{
+  --bg:#020617; --surface:rgba(15,23,42,.6); --surface2:rgba(15,23,42,.85);
+  --border:rgba(255,255,255,.08); --border2:rgba(255,255,255,.14);
+  --txt:#f1f5f9; --muted:#94a3b8; --dim:#64748b;
+  --brand:#3b82f6; --success:#10b981; --warning:#f59e0b; --danger:#ef4444;
+ }
+ *{margin:0;padding:0;box-sizing:border-box}
+ body{background:var(--bg);color:var(--txt);font-family:'Outfit',system-ui,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+ a{color:inherit;text-decoration:none}
+ .topnav{position:fixed;top:0;left:0;right:0;height:64px;background:var(--surface2);backdrop-filter:blur(20px);
+   border-bottom:1px solid var(--border);z-index:100;display:flex;align-items:center;gap:16px;padding:0 24px}
+ .brand{display:flex;align-items:center;gap:12px;font-weight:600;font-size:15px}
+ .brand img{height:26px}
+ .brand small{color:var(--dim);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.12em}
+ .spacer{flex:1}
+ .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;border:1px solid var(--border2);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+ .dot{width:8px;height:8px;border-radius:50%;background:var(--brand);box-shadow:0 0 8px currentColor}
+ .clock{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;font-weight:500}
+ main{max-width:1400px;margin:0 auto;padding:88px 24px 48px}
+ .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px}
+ .card{background:var(--surface);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:16px;padding:20px 22px}
+ .card:hover{border-color:var(--border2)}
+ .klabel{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:10px}
+ .kval{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1}
+ .ksub{font-size:12px;color:var(--muted);margin-top:8px}
+ .grid2{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-bottom:20px}
+ .hd{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;margin-bottom:16px}
+ .hd .ic{color:var(--muted)}
+ .kv{display:flex;justify-content:space-between;gap:16px;font-size:13px;padding:8px 0;border-top:1px solid var(--border)}
+ .kv b{font-weight:500;color:var(--muted)}
+ .mono{font-family:ui-monospace,'Cascadia Code',Consolas,monospace}
+ .statustag{margin-left:auto;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+ .errbox{margin-top:14px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5;color:#fca5a5;
+   background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:12px 14px;white-space:pre-wrap;word-break:break-word}
+ .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+ .seg{display:inline-flex;border:1px solid var(--border2);border-radius:9px;overflow:hidden}
+ .seg button{background:transparent;color:var(--muted);border:0;padding:7px 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+ .seg button.on{background:var(--brand);color:#fff}
+ select,input[type=search]{background:var(--surface2);color:var(--txt);border:1px solid var(--border2);border-radius:9px;padding:7px 12px;font:inherit;font-size:13px}
+ input[type=search]{min-width:220px}
+ .btn{background:var(--surface2);color:var(--txt);border:1px solid var(--border2);border-radius:9px;padding:7px 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+ .btn:hover{border-color:var(--brand)}
+ .meta{color:var(--dim);font-size:12px;margin-left:auto}
+ .logs{max-height:520px;overflow:auto}
+ .logrow{border-top:1px solid var(--border);border-left:3px solid transparent;padding:10px 12px}
+ .logrow.ERR,.logrow.FTL{border-left-color:var(--danger)}
+ .logrow.WRN{border-left-color:var(--warning)}
+ .logrow.INF{border-left-color:var(--brand)}
+ .lmeta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
+ .badge{font-size:11px;font-weight:600;letter-spacing:.04em;padding:2px 8px;border-radius:6px}
+ .b-ERR,.b-FTL{background:rgba(239,68,68,.16);color:#fca5a5}
+ .b-WRN{background:rgba(245,158,11,.16);color:#fcd34d}
+ .b-INF{background:rgba(59,130,246,.16);color:#93c5fd}
+ .b-DBG,.b-VRB{background:rgba(148,163,184,.14);color:#cbd5e1}
+ .lmsg{font-size:13.5px;margin-top:4px;color:#e2e8f0;word-break:break-word}
+ .expand{margin-top:6px;background:none;border:0;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;padding:0}
+ .expand:hover{color:var(--txt)}
+ .detail{margin-top:8px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5;color:#fca5a5;
+   background:rgba(0,0,0,.35);border-radius:10px;padding:12px 14px;white-space:pre-wrap;overflow:auto}
+ .hidden{display:none}
+ .empty{color:var(--muted);font-size:13px;padding:24px 4px}
+ @media(max-width:860px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="topnav">
+ <div class="brand">
+  <img src="https://www.aep.cl/wp-content/uploads/2025/07/logoHGT-blanco.png" alt="HGT" onerror="this.style.display='none'">
+  <span>HGT Grid API <small>Diagnóstico</small></span>
+ </div>
+ <div class="spacer"></div>
+ <span class="pill" id="envpill"><span class="dot" id="envdot"></span><span id="envname">—</span></span>
+ <span class="clock" id="clock"></span>
+</header>
+
+<main>
+ <section class="kpis" id="kpis">
+  <div class="card"><div class="klabel">Estado EAM</div><div class="kval" id="k-eam">—</div><div class="ksub" id="k-eam-sub"></div></div>
+  <div class="card"><div class="klabel">Tiempo activo</div><div class="kval" id="k-up">—</div><div class="ksub" id="k-up-sub"></div></div>
+  <div class="card"><div class="klabel">Solicitudes</div><div class="kval" id="k-req">—</div><div class="ksub" id="k-req-sub"></div></div>
+  <div class="card"><div class="klabel">Errores 5xx</div><div class="kval" id="k-err">—</div><div class="ksub">desde el arranque</div></div>
+  <div class="card"><div class="klabel">Latencia prom.</div><div class="kval" id="k-lat">—</div><div class="ksub">por solicitud</div></div>
+  <div class="card"><div class="klabel">Memoria</div><div class="kval" id="k-mem">—</div><div class="ksub" id="k-mem-sub"></div></div>
+ </section>
+
+ <section class="grid2">
+  <div class="card">
+   <div class="hd"><span class="ic">◈</span>Conexión con EAM<span class="statustag" id="eam-tag">—</span></div>
+   <div class="kv"><b>Destino</b><span class="mono" id="eam-target">—</span></div>
+   <div class="kv"><b>Proxy en uso</b><span class="mono" id="eam-proxy">—</span></div>
+   <div class="kv"><b>HTTP / Tiempo</b><span id="eam-http">—</span></div>
+   <div class="kv"><b>Último chequeo</b><span id="eam-check">—</span></div>
+   <div class="errbox hidden" id="eam-err"></div>
+  </div>
+  <div class="card">
+   <div class="hd"><span class="ic">▚</span>Entorno</div>
+   <div class="kv"><b>Ambiente</b><span id="e-env">—</span></div>
+   <div class="kv"><b>Servidor</b><span id="e-host">—</span></div>
+   <div class="kv"><b>.NET</b><span id="e-net">—</span></div>
+   <div class="kv"><b>Hilos / CPU</b><span id="e-thr">—</span></div>
+   <div class="kv"><b>Caché de grillas</b><span id="e-cache">—</span></div>
+  </div>
+ </section>
+
+ <div class="card">
+  <div class="hd"><span class="ic">≣</span>Registro
+   <span class="meta" id="log-meta"></span>
+  </div>
+  <div class="controls">
+   <span class="seg" id="src-seg">
+    <button data-src="file" class="on">Archivo</button>
+    <button data-src="db">Base de datos</button>
+   </span>
+   <select id="f-level">
+    <option value="">Todos los niveles</option>
+    <option value="ERR">Errores</option>
+    <option value="WRN">Advertencias</option>
+    <option value="INF">Información</option>
+   </select>
+   <select id="f-take">
+    <option value="100">100</option>
+    <option value="200" selected>200</option>
+    <option value="500">500</option>
+   </select>
+   <input type="search" id="f-search" placeholder="filtrar en el mensaje…">
+   <button class="btn" id="f-refresh">Refrescar</button>
+  </div>
+  <div class="logs" id="log-list"><div class="empty">Cargando…</div></div>
+ </div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const nf = n => (n==null?'—':Number(n).toLocaleString('es-CL'));
+let state = { source:'file', level:'', take:'200', search:'', entries:[] };
+
+async function api(path, {timeout}={}){
+ const ctrl = timeout ? new AbortController() : null;
+ const t = timeout ? setTimeout(()=>ctrl.abort(), timeout) : null;
+ try{ const r = await fetch(path, {headers:{Accept:'application/json'}, signal:ctrl?.signal}); return await r.json(); }
+ finally{ if(t) clearTimeout(t); }
+}
+
+async function loadPerf(){
+ try{
+  const d = await api('/diagnostics/perf');
+  $('#envname').textContent = d.app.environment;
+  const prd = /prod/i.test(d.app.environment);
+  $('#envdot').style.color = prd ? 'var(--danger)' : 'var(--brand)';
+  $('#envpill').style.borderColor = prd ? 'rgba(239,68,68,.4)' : 'var(--border2)';
+  $('#k-up').textContent = d.app.uptime;
+  $('#k-up-sub').textContent = 'desde ' + new Date(d.app.startedUtc).toLocaleString('es-CL');
+  $('#k-req').textContent = nf(d.traffic.totalRequests);
+  $('#k-req-sub').textContent = d.traffic.requestsPerMin + '/min';
+  $('#k-err').textContent = nf(d.traffic.totalErrors);
+  $('#k-err').style.color = d.traffic.totalErrors>0 ? 'var(--danger)' : '';
+  $('#k-lat').textContent = d.traffic.averageMs + ' ms';
+  $('#k-mem').textContent = d.process.workingSetMB + ' MB';
+  $('#k-mem-sub').textContent = 'heap ' + d.process.gcHeapMB + ' MB';
+  $('#e-env').textContent = d.app.environment;
+  $('#e-host').textContent = d.app.machine;
+  $('#e-net').textContent = '.NET ' + d.app.dotnet;
+  $('#e-thr').textContent = d.process.threads + ' hilos · ' + d.process.cpuTotalSec + ' s';
+  $('#e-cache').textContent = (d.cache.enabled?'activo':'inactivo') + ' · exp ' + d.cache.expirationMinutes + ' min';
+ }catch(e){ /* silencioso */ }
+}
+
+async function loadEam(){
+ const tag=$('#eam-tag'), box=$('#eam-err');
+ try{
+  const d = await api('/diagnostics/eam', {timeout:20000});
+  const ok = d.ok===true;
+  $('#k-eam').textContent = ok?'En línea':'Caído';
+  $('#k-eam').style.color = ok?'var(--success)':'var(--danger)';
+  $('#k-eam-sub').textContent = (d.elapsedMs!=null?d.elapsedMs+' ms':'') ;
+  tag.textContent = ok?'Conectado':'Caído';
+  tag.style.background = ok?'rgba(16,185,129,.16)':'rgba(239,68,68,.16)';
+  tag.style.color = ok?'#6ee7b7':'#fca5a5';
+  $('#eam-target').textContent = d.target || '—';
+  $('#eam-proxy').textContent = d.proxy || '—';
+  $('#eam-http').textContent = (d.httpStatus?('HTTP '+d.httpStatus+' · '):'') + (d.elapsedMs!=null?d.elapsedMs+' ms':'—');
+  $('#eam-check').textContent = d.checkedAtUtc ? new Date(d.checkedAtUtc).toLocaleString('es-CL') : '—';
+  if(d.error || d.message){ box.textContent = d.error || d.message; box.classList.remove('hidden'); }
+  else box.classList.add('hidden');
+ }catch(e){
+  $('#k-eam').textContent='Sin respuesta'; $('#k-eam').style.color='var(--warning)';
+  tag.textContent='Timeout'; tag.style.background='rgba(245,158,11,.16)'; tag.style.color='#fcd34d';
+  box.textContent='La sonda no respondió dentro del límite del panel (20 s).'; box.classList.remove('hidden');
+ }
+}
+
+function renderLogs(){
+ const q = state.search.trim().toLowerCase();
+ const rows = state.entries.filter(e => !q || (e.message+' '+(e.source||'')+' '+(e.detail||'')).toLowerCase().includes(q));
+ const list = $('#log-list');
+ if(!rows.length){ list.innerHTML = '<div class="empty">Sin entradas para mostrar.</div>'; return; }
+ list.innerHTML = rows.map((e,i)=>{
+  const lv = e.level||'INF';
+  const det = e.detail ? `<button class="expand" data-i="${i}">▸ ver detalle</button><pre class="detail hidden" id="det-${i}">${esc(e.detail)}</pre>` : '';
+  return `<div class="logrow ${lv}">
+    <div class="lmeta"><span class="mono">${esc(e.ts)}</span><span class="badge b-${lv}">${lv}</span>${e.source?`<span>${esc(e.source)}</span>`:''}</div>
+    <div class="lmsg">${esc(e.message)}</div>${det}</div>`;
+ }).join('');
+ list.querySelectorAll('.expand').forEach(b=>b.onclick=()=>{
+  const p=$('#det-'+b.dataset.i); p.classList.toggle('hidden');
+  b.textContent=(p.classList.contains('hidden')?'▸ ver detalle':'▾ ocultar detalle');
+ });
+}
+
+async function loadLogs(){
+ const list=$('#log-list'); list.innerHTML='<div class="empty">Cargando…</div>';
+ try{
+  const d = await api(`/diagnostics/logs?source=${state.source}&take=${state.take}&level=${encodeURIComponent(state.level)}`);
+  state.entries = d.entries || [];
+  if(!d.available){
+   $('#log-meta').textContent='';
+   list.innerHTML = `<div class="empty">${esc(d.error || d.message || 'Sin datos.')}</div>`;
+   return;
+  }
+  $('#log-meta').textContent = (d.source==='db'?('tabla '+(d.table||'')):(d.file||'')) + ' · ' + (d.count||0) + ' entradas';
+  renderLogs();
+ }catch(e){ list.innerHTML = '<div class="empty">Error consultando el registro.</div>'; }
+}
+
+$('#src-seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+ $('#src-seg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+ b.classList.add('on'); state.source=b.dataset.src; loadLogs();
+});
+$('#f-level').onchange = e=>{ state.level=e.target.value; loadLogs(); };
+$('#f-take').onchange = e=>{ state.take=e.target.value; loadLogs(); };
+$('#f-search').oninput = e=>{ state.search=e.target.value; renderLogs(); };
+$('#f-refresh').onclick = loadLogs;
+
+(function clock(){ const el=$('#clock'); if(el) el.textContent=new Date().toLocaleTimeString('es-CL'); setTimeout(clock,1000); })();
+loadPerf(); loadEam(); loadLogs();
+setInterval(loadPerf, 10000);
+setInterval(loadEam, 15000);
+setInterval(loadLogs, 30000);
+</script>
+</body>
+</html>

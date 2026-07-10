@@ -1,15 +1,18 @@
 using HGT.EAM.WebServices.Infrastructure.Architecture.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace HGT.EAM.WebServices.Application.Controllers;
 
 /// <summary>
 /// Panel interno de diagnóstico. Protegido con la MISMA Basic Auth que los endpoints de la API
 /// (cualquier usuario de <c>EAMCredentials</c> entra con sus mismas credenciales).
-/// Expone: estado de la conexión con EAM, visor del log de Serilog y métricas de rendimiento.
-/// Se excluye de la documentación OpenAPI/Scalar (ApiExplorerSettings.IgnoreApi).
+/// Expone: estado de la conexión con EAM, visor del log (archivo + tabla SQL) y métricas de rendimiento.
+/// La página (HTML físico y editable) vive en <c>Diagnostics/index.html</c>. Se excluye de OpenAPI/Scalar.
 /// </summary>
 [Authorize]
 [ApiController]
@@ -35,9 +38,20 @@ public class DiagnosticsController : ControllerBase
         _env = env;
     }
 
-    /// <summary>Página HTML del panel (autocontenida, sin dependencias externas / CDN).</summary>
+    /// <summary>
+    /// Sirve la página del panel desde un HTML físico y editable (<c>Diagnostics/index.html</c> en el
+    /// directorio de la app). Al estar detrás de <c>[Authorize]</c> queda protegido y NO se expone por
+    /// archivos estáticos. Editable en caliente (se relee del disco en cada petición).
+    /// </summary>
     [HttpGet("")]
-    public ContentResult Index() => Content(BuildHtml(), "text/html; charset=utf-8");
+    public IActionResult Index()
+    {
+        var path = Path.Combine(_env.ContentRootPath, "Diagnostics", "index.html");
+        if (!System.IO.File.Exists(path))
+            return Content($"<h1>Panel de diagnóstico</h1><p>No se encontró la página en <code>{path}</code>.</p>",
+                           "text/html; charset=utf-8");
+        return PhysicalFile(path, "text/html; charset=utf-8");
+    }
 
     /// <summary>
     /// Sonda de conectividad a EAM. Hace un GET al EAMBaseUrl por el mismo camino de red
@@ -51,7 +65,7 @@ public class DiagnosticsController : ControllerBase
             return Ok(new { ok = false, reachable = false, message = "EAMBaseUrl no está configurado.", checkedAtUtc = DateTime.UtcNow });
 
         var client = _httpClientFactory.CreateClient("eam-probe");
-        client.Timeout = TimeSpan.FromSeconds(10);
+        client.Timeout = TimeSpan.FromMinutes(5);
 
         var stopwatch = Stopwatch.StartNew();
         try
@@ -87,24 +101,22 @@ public class DiagnosticsController : ControllerBase
         }
     }
 
-    /// <summary>Últimas entradas del archivo rotativo de Serilog (logs/HGT.WebServices*.log).</summary>
+    /// <summary>
+    /// Visor de log. <paramref name="source"/> = "file" (archivo rotativo de Serilog) o "db"
+    /// (la tabla donde escribe el sink MSSqlServer, p. ej. U5HGTEAMWEB). Devuelve entradas
+    /// estructuradas { ts, level, source, message, detail }.
+    /// </summary>
     [HttpGet("logs")]
-    public IActionResult Logs([FromQuery] int take = 200, [FromQuery] string? level = null)
+    public async Task<IActionResult> Logs(
+        [FromQuery] int take = 200,
+        [FromQuery] string? level = null,
+        [FromQuery] string source = "file",
+        CancellationToken cancellationToken = default)
     {
-        var logsDir = Path.Combine(_env.ContentRootPath, "logs");
-        if (!Directory.Exists(logsDir))
-            return Ok(new { available = false, message = "No existe la carpeta de logs.", dir = logsDir });
-
-        var file = new DirectoryInfo(logsDir)
-            .GetFiles("*.log")
-            .OrderByDescending(f => f.LastWriteTimeUtc)
-            .FirstOrDefault();
-
-        if (file is null)
-            return Ok(new { available = false, message = "No hay archivos .log.", dir = logsDir });
-
-        var entries = ReadTailEntries(file.FullName, Math.Clamp(take, 1, 2000), level);
-        return Ok(new { available = true, file = file.Name, dir = logsDir, count = entries.Count, lines = entries });
+        take = Math.Clamp(take, 1, 2000);
+        if (string.Equals(source, "db", StringComparison.OrdinalIgnoreCase))
+            return await ReadDbLogsAsync(take, level, cancellationToken);
+        return ReadFileLogs(take, level);
     }
 
     /// <summary>Métricas de rendimiento: uptime, memoria, CPU, tráfico y caché.</summary>
@@ -151,7 +163,211 @@ public class DiagnosticsController : ControllerBase
         });
     }
 
-    // ---------- helpers ----------
+    // ---------- fuente: archivo ----------
+
+    private IActionResult ReadFileLogs(int take, string? level)
+    {
+        var logsDir = Path.Combine(_env.ContentRootPath, "logs");
+        if (!Directory.Exists(logsDir))
+            return Ok(new { available = false, source = "file", message = "No existe la carpeta de logs.", dir = logsDir, entries = Array.Empty<object>() });
+
+        var file = new DirectoryInfo(logsDir)
+            .GetFiles("*.log")
+            .OrderByDescending(f => f.LastWriteTimeUtc)
+            .FirstOrDefault();
+
+        if (file is null)
+            return Ok(new { available = false, source = "file", message = "No hay archivos .log.", dir = logsDir, entries = Array.Empty<object>() });
+
+        var entries = ReadFileEntries(file.FullName, take, level);
+        return Ok(new { available = true, source = "file", file = file.Name, dir = logsDir, count = entries.Count, entries });
+    }
+
+    /// <summary>
+    /// Lee el final del archivo (~512 KB) y agrupa las líneas en entradas por marca de tiempo,
+    /// tolerando los formatos de esta API (<c>[fecha NIVEL] [Origen] msg</c>) y el de otros
+    /// servicios (<c>fecha [NIVEL] msg {json}</c>). Los stack traces multilínea quedan en <c>detail</c>.
+    /// </summary>
+    private static List<object> ReadFileEntries(string path, int take, string? level)
+    {
+        const long maxBytes = 512 * 1024;
+        string content;
+        long start;
+        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        {
+            start = Math.Max(0, fs.Length - maxBytes);
+            fs.Seek(start, SeekOrigin.Begin);
+            using var reader = new StreamReader(fs);
+            content = reader.ReadToEnd();
+        }
+
+        var raw = new List<List<string>>();
+        List<string>? cur = null;
+        foreach (var line0 in content.Split('\n'))
+        {
+            var line = line0.TrimEnd('\r');
+            if (HeaderRegex.IsMatch(line))
+            {
+                cur = new List<string> { line };
+                raw.Add(cur);
+            }
+            else if (cur != null)
+            {
+                cur.Add(line);
+            }
+        }
+        if (start > 0 && raw.Count > 0) raw.RemoveAt(0); // primera entrada posiblemente parcial
+
+        var wanted = string.IsNullOrWhiteSpace(level) ? null : ShortLevel(level);
+        var result = new List<object>();
+        foreach (var entry in raw)
+        {
+            var header = entry[0];
+            var detail = entry.Count > 1 ? string.Join("\n", entry.Skip(1)).TrimEnd() : "";
+            var parsed = ParseHeader(header);
+            if (wanted != null && parsed.level != wanted) continue;
+            result.Add(new { ts = parsed.ts, level = parsed.level, source = parsed.source, message = parsed.message, detail });
+        }
+        return result.Skip(Math.Max(0, result.Count - take)).ToList();
+    }
+
+    private static readonly Regex HeaderRegex =
+        new(@"^\[?\s*\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}", RegexOptions.Compiled);
+    private static readonly Regex TsRegex =
+        new(@"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:\s*[+-]\d{2}:\d{2})?", RegexOptions.Compiled);
+    private static readonly Regex LevelRegex =
+        new(@"\b(VRB|DBG|INF|WRN|ERR|FTL|Verbose|Debug|Information|Warning|Error|Fatal)\b", RegexOptions.Compiled);
+    private static readonly Regex SourceRegex =
+        new(@"\]\s*\[([\w.]+)\]", RegexOptions.Compiled);
+
+    private static (string ts, string level, string source, string message) ParseHeader(string header)
+    {
+        var tsm = TsRegex.Match(header);
+        var ts = tsm.Success ? tsm.Value.Trim() : "";
+        var lvlm = LevelRegex.Match(header.Length > 60 ? header[..60] : header);
+        var level = lvlm.Success ? ShortLevel(lvlm.Value) : "INF";
+
+        string source = "";
+        var sm = SourceRegex.Match(header);
+        if (sm.Success) source = sm.Groups[1].Value;
+
+        var msg = header;
+        if (ts.Length > 0) { var i = msg.IndexOf(ts, StringComparison.Ordinal); if (i >= 0) msg = msg.Remove(i, ts.Length); }
+        if (lvlm.Success) { var i = msg.IndexOf(lvlm.Value, StringComparison.Ordinal); if (i >= 0) msg = msg.Remove(i, lvlm.Value.Length); }
+        msg = msg.TrimStart(' ', '[', ']', '-', ':', '\t');
+        msg = Regex.Replace(msg, @"^\[[\w.]+\]\s*", "");     // quita [Origen] inicial
+        var j = msg.IndexOf(" {\"", StringComparison.Ordinal); // quita contexto JSON final
+        if (j > 0 && msg.TrimEnd().EndsWith("}", StringComparison.Ordinal))
+        {
+            if (source.Length == 0)
+            {
+                var scm = Regex.Match(msg[j..], "\"SourceContext\"\\s*:\\s*\"([^\"]+)\"");
+                if (scm.Success) source = scm.Groups[1].Value;
+            }
+            msg = msg[..j];
+        }
+        return (ts, level, source, msg.Trim());
+    }
+
+    // ---------- fuente: base de datos (tabla del sink MSSqlServer) ----------
+
+    private async Task<IActionResult> ReadDbLogsAsync(int take, string? level, CancellationToken ct)
+    {
+        var (conn, table) = ResolveLogDb();
+        if (string.IsNullOrWhiteSpace(conn))
+            return Ok(new { available = false, source = "db", message = "No se encontró la cadena de conexión del sink MSSqlServer (Serilog) ni Diagnostics:LogConnectionString.", entries = Array.Empty<object>() });
+
+        var safeTable = SanitizeTable(table);
+        try
+        {
+            var entries = new List<object>();
+            await using var cn = new SqlConnection(conn);
+            await cn.OpenAsync(ct);
+
+            var where = string.IsNullOrWhiteSpace(level) ? "" : " WHERE [Level] = @lvl";
+            var sql = $"SELECT TOP (@n) [TimeStamp],[Level],[Message],[Exception],[RequestPath],[CurrentUser] FROM {safeTable}{where} ORDER BY [Id] DESC";
+
+            await using var cmd = new SqlCommand(sql, cn);
+            cmd.Parameters.AddWithValue("@n", take);
+            if (!string.IsNullOrWhiteSpace(level)) cmd.Parameters.AddWithValue("@lvl", FullLevel(level));
+
+            await using var r = await cmd.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+            {
+                var ts = r["TimeStamp"] is DateTime dt ? dt.ToString("yyyy-MM-dd HH:mm:ss.fff") : (r["TimeStamp"]?.ToString() ?? "");
+                var lvl = ShortLevel(r["Level"]?.ToString());
+                var msg = r["Message"]?.ToString() ?? "";
+                var exc = r["Exception"] as string ?? "";
+                var src = r["RequestPath"] as string;
+                var usr = r["CurrentUser"] as string;
+                entries.Add(new { ts, level = lvl, source = string.IsNullOrWhiteSpace(src) ? (usr ?? "") : src, message = msg, detail = exc });
+            }
+            entries.Reverse(); // de más antiguo a más reciente, como el archivo
+            return Ok(new { available = true, source = "db", table = safeTable, count = entries.Count, entries });
+        }
+        catch (Exception ex)
+        {
+            return Ok(new { available = false, source = "db", table = safeTable, error = FlattenException(ex), entries = Array.Empty<object>() });
+        }
+    }
+
+    /// <summary>Resuelve conexión + tabla del log en BD: primero config explícita, luego el sink MSSqlServer de Serilog.</summary>
+    private (string? conn, string table) ResolveLogDb()
+    {
+        var conn = _configuration["Diagnostics:LogConnectionString"];
+        var table = _configuration["Diagnostics:LogTable"];
+        if (!string.IsNullOrWhiteSpace(conn))
+            return (conn, string.IsNullOrWhiteSpace(table) ? "U5HGTEAMWEB" : table!);
+
+        var (c, t) = FindMsSqlSink(_configuration.GetSection("Serilog"));
+        return (c, string.IsNullOrWhiteSpace(t) ? (string.IsNullOrWhiteSpace(table) ? "U5HGTEAMWEB" : table!) : t!);
+    }
+
+    private static (string? conn, string? table) FindMsSqlSink(IConfigurationSection section)
+    {
+        foreach (var child in section.GetChildren())
+        {
+            if (string.Equals(child["Name"], "MSSqlServer", StringComparison.OrdinalIgnoreCase))
+            {
+                var args = child.GetSection("Args");
+                return (args["connectionString"], args["tableName"]);
+            }
+            var found = FindMsSqlSink(child);
+            if (found.conn != null) return found;
+        }
+        return (null, null);
+    }
+
+    private static string SanitizeTable(string table)
+    {
+        var name = new string((table ?? "U5HGTEAMWEB").Where(c => char.IsLetterOrDigit(c) || c == '_').ToArray());
+        if (name.Length == 0) name = "U5HGTEAMWEB";
+        return $"[{name}]";
+    }
+
+    // ---------- helpers comunes ----------
+
+    private static string ShortLevel(string? lvl) => (lvl ?? "").Trim().ToUpperInvariant() switch
+    {
+        "INFORMATION" or "INF" => "INF",
+        "WARNING" or "WARN" or "WRN" => "WRN",
+        "ERROR" or "ERR" => "ERR",
+        "FATAL" or "FTL" => "FTL",
+        "DEBUG" or "DBG" => "DBG",
+        "VERBOSE" or "VRB" => "VRB",
+        var s => s.Length >= 3 ? s[..3] : s
+    };
+
+    private static string FullLevel(string level) => ShortLevel(level) switch
+    {
+        "INF" => "Information",
+        "WRN" => "Warning",
+        "ERR" => "Error",
+        "FTL" => "Fatal",
+        "DBG" => "Debug",
+        "VRB" => "Verbose",
+        _ => level
+    };
 
     private static string ResolveProxy(string url)
     {
@@ -183,158 +399,4 @@ public class DiagnosticsController : ControllerBase
         }
         return sb.ToString();
     }
-
-    /// <summary>
-    /// Lee el final del archivo (hasta ~512 KB) y agrupa las líneas en entradas de log
-    /// (una entrada por marca de tiempo), para que los stack traces multilínea no se corten.
-    /// </summary>
-    private static List<string> ReadTailEntries(string path, int take, string? level)
-    {
-        const long maxBytes = 512 * 1024;
-        string content;
-        long start;
-
-        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-        {
-            start = Math.Max(0, fs.Length - maxBytes);
-            fs.Seek(start, SeekOrigin.Begin);
-            using var reader = new StreamReader(fs);
-            content = reader.ReadToEnd();
-        }
-
-        var entries = new List<string>();
-        var current = new System.Text.StringBuilder();
-        foreach (var raw in content.Split('\n'))
-        {
-            var line = raw.TrimEnd('\r');
-            // Cada entrada empieza con "[yyyy-MM-dd HH:mm:ss..." según el outputTemplate de Serilog.
-            var isHeader = line.StartsWith('[') && line.Length > 21 && char.IsDigit(line[1]);
-            if (isHeader && current.Length > 0)
-            {
-                entries.Add(current.ToString());
-                current.Clear();
-            }
-            if (current.Length > 0) current.Append('\n');
-            current.Append(line);
-        }
-        if (current.Length > 0) entries.Add(current.ToString());
-
-        // Descartar la primera entrada si empezamos a leer a mitad de archivo (probablemente parcial).
-        if (start > 0 && entries.Count > 0) entries.RemoveAt(0);
-
-        IEnumerable<string> query = entries;
-        if (!string.IsNullOrWhiteSpace(level))
-        {
-            var token = level.Trim().ToUpperInvariant() switch
-            {
-                "ERROR" or "ERR" => "ERR",
-                "FATAL" or "FTL" => "FTL",
-                "WARNING" or "WARN" or "WRN" => "WRN",
-                "INFO" or "INFORMATION" or "INF" => "INF",
-                _ => level.ToUpperInvariant()
-            };
-            // El nivel aparece como "[2026-... ERR]" en la cabecera de la entrada.
-            query = query.Where(e => e.Contains(token + "]") || (token == "ERR" && e.Contains("FTL]")));
-        }
-
-        return query.TakeLast(take).ToList();
-    }
-
-    private static string BuildHtml() => """
-<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HGT Grid API — Diagnóstico</title>
-<style>
- *{box-sizing:border-box}
- body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f8;color:#1f2a2e}
- header{background:#222A36;color:#fff;padding:14px 20px;display:flex;align-items:center;gap:10px}
- header strong{font-size:16px}
- header .env{margin-left:auto;font-size:12px;opacity:.85}
- .wrap{max-width:1120px;margin:18px auto;padding:0 16px;display:grid;gap:16px;grid-template-columns:1fr 1fr}
- .card{background:#fff;border:1px solid #e2e7ea;border-radius:10px;padding:16px}
- .card.full{grid-column:1/-1}
- .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#5a6e6b;margin:0 0 12px}
- .badge{display:inline-block;padding:2px 12px;border-radius:12px;font-size:12px;font-weight:700;margin-bottom:10px}
- .ok{background:#e6f4ea;color:#1e7e34}.fail{background:#fdecea;color:#c0392b}
- table{width:100%;border-collapse:collapse;font-size:13px}
- td{padding:4px 0;vertical-align:top}td.k{color:#6a7a77;width:40%}
- pre{background:#0f1720;color:#d6e2e0;padding:12px;border-radius:8px;overflow:auto;max-height:360px;font-size:12px;line-height:1.45;white-space:pre-wrap;word-break:break-word;margin:0}
- .er{color:#ff8a80}
- .controls{display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:13px;flex-wrap:wrap}
- button,select{font:inherit;padding:5px 10px;border:1px solid #cbd5d3;border-radius:6px;background:#fff;cursor:pointer}
- .muted{color:#8a9794;font-size:12px}
-</style>
-</head>
-<body>
-<header><strong>HGT Grid API</strong><span>· Panel de diagnóstico</span><span class="env" id="env">—</span></header>
-<div class="wrap">
- <div class="card"><h2>Conexión con EAM</h2><div id="eam">Cargando…</div></div>
- <div class="card"><h2>Rendimiento</h2><div id="perf">Cargando…</div></div>
- <div class="card full">
-  <h2>Registro (Serilog)</h2>
-  <div class="controls">
-   <label>Nivel:</label>
-   <select id="level"><option value="">Todos</option><option value="error">Errores</option><option value="warning">Advertencias</option></select>
-   <label>Entradas:</label>
-   <select id="take"><option>100</option><option selected>200</option><option>500</option></select>
-   <button onclick="loadLogs()">Refrescar</button>
-   <span class="muted" id="logmeta"></span>
-  </div>
-  <pre id="logs">Cargando…</pre>
- </div>
-</div>
-<script>
-const $=id=>document.getElementById(id);
-const esc=s=>(s==null?'':s.toString()).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const row=(k,v)=>'<tr><td class="k">'+k+'</td><td>'+v+'</td></tr>';
-async function j(u){const r=await fetch(u,{headers:{'Accept':'application/json'}});return r.json();}
-async function loadEam(){
- try{
-  const d=await j('/diagnostics/eam');
-  let h=(d.ok?'<span class="badge ok">CONECTADO</span>':'<span class="badge fail">FALLO</span>')+'<table>';
-  h+=row('Destino',esc(d.target));
-  if(d.httpStatus)h+=row('HTTP',d.httpStatus);
-  h+=row('Proxy',esc(d.proxy||'—'));
-  h+=row('Tiempo',(d.elapsedMs!=null?d.elapsedMs:'—')+' ms');
-  if(d.error)h+=row('Error real','<span class="er">'+esc(d.error)+'</span>');
-  if(d.message)h+=row('Nota',esc(d.message));
-  h+=row('Verificado',new Date(d.checkedAtUtc).toLocaleString());
-  h+='</table>';$('eam').innerHTML=h;
- }catch(e){$('eam').innerHTML='<span class="badge fail">ERROR</span> '+esc(e.message);}
-}
-async function loadPerf(){
- try{
-  const d=await j('/diagnostics/perf');
-  $('env').textContent=d.app.environment+' · '+d.app.machine;
-  let h='<table>';
-  h+=row('Ambiente',esc(d.app.environment));
-  h+=row('Uptime',esc(d.app.uptime));
-  h+=row('Requests',d.traffic.totalRequests+' ('+d.traffic.requestsPerMin+'/min)');
-  h+=row('Errores 5xx',d.traffic.totalErrors);
-  h+=row('Promedio',d.traffic.averageMs+' ms');
-  h+=row('Memoria',d.process.workingSetMB+' MB · heap '+d.process.gcHeapMB+' MB');
-  h+=row('Hilos',d.process.threads);
-  h+=row('CPU total',d.process.cpuTotalSec+' s');
-  h+=row('Caché',(d.cache.enabled?'ON':'OFF')+' · exp '+d.cache.expirationMinutes+' min');
-  h+=row('.NET',esc(d.app.dotnet));
-  h+='</table>';$('perf').innerHTML=h;
- }catch(e){$('perf').innerHTML='<span class="er">'+esc(e.message)+'</span>';}
-}
-async function loadLogs(){
- try{
-  const d=await j('/diagnostics/logs?take='+$('take').value+'&level='+encodeURIComponent($('level').value));
-  if(!d.available){$('logs').textContent=d.message+' ('+(d.dir||'')+')';$('logmeta').textContent='';return;}
-  $('logmeta').textContent=d.file+' · '+d.count+' entradas';
-  $('logs').innerHTML=d.lines.map(esc).join('\n')||'(sin entradas)';
- }catch(e){$('logs').innerHTML='<span class="er">'+esc(e.message)+'</span>';}
-}
-loadEam();loadPerf();loadLogs();
-setInterval(loadEam,10000);setInterval(loadPerf,10000);setInterval(loadLogs,20000);
-</script>
-</body>
-</html>
-""";
 }
