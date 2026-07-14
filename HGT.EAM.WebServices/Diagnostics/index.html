@@ -1,250 +1,457 @@
-<!doctype html>
-<html lang="es">
+<!DOCTYPE html>
+<html lang="es" class="dark">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HGT Grid API — Diagnóstico</title>
-<style>
- @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
- :root{
-  --bg:#020617; --surface:rgba(15,23,42,.6); --surface2:rgba(15,23,42,.85);
-  --border:rgba(255,255,255,.08); --border2:rgba(255,255,255,.14);
-  --txt:#f1f5f9; --muted:#94a3b8; --dim:#64748b;
-  --brand:#3b82f6; --success:#10b981; --warning:#f59e0b; --danger:#ef4444;
- }
- *{margin:0;padding:0;box-sizing:border-box}
- body{background:var(--bg);color:var(--txt);font-family:'Outfit',system-ui,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
- a{color:inherit;text-decoration:none}
- .topnav{position:fixed;top:0;left:0;right:0;height:64px;background:var(--surface2);backdrop-filter:blur(20px);
-   border-bottom:1px solid var(--border);z-index:100;display:flex;align-items:center;gap:16px;padding:0 24px}
- .brand{display:flex;align-items:center;gap:12px;font-weight:600;font-size:15px}
- .brand img{height:26px}
- .brand small{color:var(--dim);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.12em}
- .spacer{flex:1}
- .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;border:1px solid var(--border2);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
- .dot{width:8px;height:8px;border-radius:50%;background:var(--brand);box-shadow:0 0 8px currentColor}
- .clock{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;font-weight:500}
- main{max-width:1400px;margin:0 auto;padding:88px 24px 48px}
- .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px}
- .card{background:var(--surface);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:16px;padding:20px 22px}
- .card:hover{border-color:var(--border2)}
- .klabel{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:10px}
- .kval{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1}
- .ksub{font-size:12px;color:var(--muted);margin-top:8px}
- .grid2{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-bottom:20px}
- .hd{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;margin-bottom:16px}
- .hd .ic{color:var(--muted)}
- .kv{display:flex;justify-content:space-between;gap:16px;font-size:13px;padding:8px 0;border-top:1px solid var(--border)}
- .kv b{font-weight:500;color:var(--muted)}
- .mono{font-family:ui-monospace,'Cascadia Code',Consolas,monospace}
- .statustag{margin-left:auto;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
- .errbox{margin-top:14px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5;color:#fca5a5;
-   background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:12px 14px;white-space:pre-wrap;word-break:break-word}
- .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
- .seg{display:inline-flex;border:1px solid var(--border2);border-radius:9px;overflow:hidden}
- .seg button{background:transparent;color:var(--muted);border:0;padding:7px 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer}
- .seg button.on{background:var(--brand);color:#fff}
- select,input[type=search]{background:var(--surface2);color:var(--txt);border:1px solid var(--border2);border-radius:9px;padding:7px 12px;font:inherit;font-size:13px}
- input[type=search]{min-width:220px}
- .btn{background:var(--surface2);color:var(--txt);border:1px solid var(--border2);border-radius:9px;padding:7px 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer}
- .btn:hover{border-color:var(--brand)}
- .meta{color:var(--dim);font-size:12px;margin-left:auto}
- .logs{max-height:520px;overflow:auto}
- .logrow{border-top:1px solid var(--border);border-left:3px solid transparent;padding:10px 12px}
- .logrow.ERR,.logrow.FTL{border-left-color:var(--danger)}
- .logrow.WRN{border-left-color:var(--warning)}
- .logrow.INF{border-left-color:var(--brand)}
- .lmeta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
- .badge{font-size:11px;font-weight:600;letter-spacing:.04em;padding:2px 8px;border-radius:6px}
- .b-ERR,.b-FTL{background:rgba(239,68,68,.16);color:#fca5a5}
- .b-WRN{background:rgba(245,158,11,.16);color:#fcd34d}
- .b-INF{background:rgba(59,130,246,.16);color:#93c5fd}
- .b-DBG,.b-VRB{background:rgba(148,163,184,.14);color:#cbd5e1}
- .lmsg{font-size:13.5px;margin-top:4px;color:#e2e8f0;word-break:break-word}
- .expand{margin-top:6px;background:none;border:0;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;padding:0}
- .expand:hover{color:var(--txt)}
- .detail{margin-top:8px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5;color:#fca5a5;
-   background:rgba(0,0,0,.35);border-radius:10px;padding:12px 14px;white-space:pre-wrap;overflow:auto}
- .hidden{display:none}
- .empty{color:var(--muted);font-size:13px;padding:24px 4px}
- @media(max-width:860px){.grid2{grid-template-columns:1fr}}
-</style>
+  <meta charset="utf-8">
+  <title>HGT EAM Web Services - Diagnostics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    /* Scrollbars elegantes */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dark ::-webkit-scrollbar-thumb { background: #334155; }
+  </style>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: '#ea580c',     // Naranja HGT
+            bgLight: '#f8fafc',   // Fondo claro general
+            cardLight: '#ffffff', // Fondo tarjeta clara
+            borderLight: '#e2e8f0', // Bordes claro
+            bgDark: '#081320',    // Maritime Dark
+            cardDark: '#0E1A29',  // Tarjeta Dark
+            borderDark: '#1E314A' // Borde Dark
+          }
+        }
+      }
+    }
+  </script>
 </head>
-<body>
-<header class="topnav">
- <div class="brand">
-  <img src="https://www.aep.cl/wp-content/uploads/2025/07/logoHGT-blanco.png" alt="HGT" onerror="this.style.display='none'">
-  <span>HGT Grid API <small>Diagnóstico</small></span>
- </div>
- <div class="spacer"></div>
- <span class="pill" id="envpill"><span class="dot" id="envdot"></span><span id="envname">—</span></span>
- <span class="clock" id="clock"></span>
+<body class="bg-bgLight dark:bg-bgDark text-slate-800 dark:text-slate-200 transition-colors duration-200 antialiased min-h-screen flex flex-col">
+
+<!-- Top Navigation -->
+<header class="bg-cardLight dark:bg-cardDark border-b border-borderLight dark:border-borderDark sticky top-0 z-50">
+  <div class="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <img src="https://www.aep.cl/wp-content/uploads/2025/07/logoHGT-blanco.png" alt="HGT" class="h-8 hidden dark:block">
+      <!-- Un logo simulado oscuro para modo claro, si fallara se oculta -->
+      <div class="font-bold text-xl tracking-tight text-slate-800 dark:text-white flex items-baseline gap-2">
+        HGT API <span class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest">Diagnóstico</span>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-4">
+      <span class="flex items-center gap-2 px-3 py-1 rounded-full border border-borderLight dark:border-borderDark text-sm font-medium bg-slate-50 dark:bg-slate-800/50" id="envpill">
+        <span class="w-2 h-2 rounded-full bg-slate-400" id="envdot"></span>
+        <span id="envname">—</span>
+      </span>
+      <span class="text-sm font-mono text-slate-500 dark:text-slate-400" id="clock">--:--:--</span>
+      <button id="theme-btn" class="p-2 text-slate-500 hover:text-brand transition-colors rounded-lg border border-borderLight dark:border-borderDark hover:border-brand" title="Cambiar Tema">
+        <svg id="theme-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+      </button>
+    </div>
+  </div>
 </header>
 
-<main>
- <section class="kpis" id="kpis">
-  <div class="card"><div class="klabel">Estado EAM</div><div class="kval" id="k-eam">—</div><div class="ksub" id="k-eam-sub"></div></div>
-  <div class="card"><div class="klabel">Tiempo activo</div><div class="kval" id="k-up">—</div><div class="ksub" id="k-up-sub"></div></div>
-  <div class="card"><div class="klabel">Solicitudes</div><div class="kval" id="k-req">—</div><div class="ksub" id="k-req-sub"></div></div>
-  <div class="card"><div class="klabel">Errores 5xx</div><div class="kval" id="k-err">—</div><div class="ksub">desde el arranque</div></div>
-  <div class="card"><div class="klabel">Latencia prom.</div><div class="kval" id="k-lat">—</div><div class="ksub">por solicitud</div></div>
-  <div class="card"><div class="klabel">Memoria</div><div class="kval" id="k-mem">—</div><div class="ksub" id="k-mem-sub"></div></div>
- </section>
+<main class="flex-1 max-w-[1600px] w-full mx-auto px-6 py-8 flex flex-col gap-6">
 
- <section class="grid2">
-  <div class="card">
-   <div class="hd"><span class="ic">◈</span>Conexión con EAM<span class="statustag" id="eam-tag">—</span></div>
-   <div class="kv"><b>Destino</b><span class="mono" id="eam-target">—</span></div>
-   <div class="kv"><b>Proxy en uso</b><span class="mono" id="eam-proxy">—</span></div>
-   <div class="kv"><b>HTTP / Tiempo</b><span id="eam-http">—</span></div>
-   <div class="kv"><b>Último chequeo</b><span id="eam-check">—</span></div>
-   <div class="errbox hidden" id="eam-err"></div>
+  <!-- Overview Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl p-5 shadow-sm">
+      <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex justify-between">Tiempo Activo <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></div>
+      <div class="text-2xl font-bold" id="k-up">—</div>
+      <div class="text-xs text-slate-400 mt-1" id="k-up-sub">Arrancando...</div>
+    </div>
+    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl p-5 shadow-sm">
+      <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex justify-between">Errores 5xx <svg class="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+      <div class="text-2xl font-bold" id="k-err">—</div>
+      <div class="text-xs text-slate-400 mt-1">desde el arranque</div>
+    </div>
+    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl p-5 shadow-sm col-span-1 md:col-span-2">
+      <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Host & Entorno</div>
+      <div class="grid grid-cols-2 gap-4 text-sm mt-3">
+        <div class="flex justify-between border-b border-borderLight dark:border-borderDark pb-2"><span class="text-slate-500">Máquina</span><span class="font-mono text-right" id="e-host">—</span></div>
+        <div class="flex justify-between border-b border-borderLight dark:border-borderDark pb-2"><span class="text-slate-500">Runtime</span><span class="font-mono text-right" id="e-net">—</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Hilos CPU</span><span class="font-mono text-right" id="e-thr">—</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Caché</span><span class="font-mono text-right" id="e-cache">—</span></div>
+      </div>
+    </div>
   </div>
-  <div class="card">
-   <div class="hd"><span class="ic">▚</span>Entorno</div>
-   <div class="kv"><b>Ambiente</b><span id="e-env">—</span></div>
-   <div class="kv"><b>Servidor</b><span id="e-host">—</span></div>
-   <div class="kv"><b>.NET</b><span id="e-net">—</span></div>
-   <div class="kv"><b>Hilos / CPU</b><span id="e-thr">—</span></div>
-   <div class="kv"><b>Caché de grillas</b><span id="e-cache">—</span></div>
-  </div>
- </section>
 
- <div class="card">
-  <div class="hd"><span class="ic">≣</span>Registro
-   <span class="meta" id="log-meta"></span>
+  <!-- Charts & Connectivity -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Conexión EAM -->
+    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm flex flex-col">
+      <div class="p-5 border-b border-borderLight dark:border-borderDark flex justify-between items-center">
+        <h2 class="text-sm font-semibold uppercase tracking-wider flex items-center gap-2"><svg class="w-5 h-5 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"></rect><rect x="2" y="16" width="6" height="6" rx="1"></rect><rect x="9" y="2" width="6" height="6" rx="1"></rect><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"></path><path d="M12 12V8"></path></svg> Conexión EAM</h2>
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400" id="eam-tag">—</span>
+      </div>
+      <div class="p-5 flex-1 flex flex-col">
+        <div class="flex justify-between text-sm py-2 border-b border-borderLight dark:border-borderDark"><span class="text-slate-500">Destino</span><span class="font-mono" id="eam-target">—</span></div>
+        <div class="flex justify-between text-sm py-2"><span class="text-slate-500">Proxy en uso</span><span class="font-mono" id="eam-proxy">—</span></div>
+        
+        <div class="mt-auto pt-6">
+          <button id="btn-ping-auth" class="w-full bg-brand hover:bg-orange-500 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+            Validar Organización (Ping Auth)
+          </button>
+          
+          <!-- Resultado Auth -->
+          <div id="auth-result" class="hidden mt-4 p-4 rounded-lg text-sm border font-mono">
+            <div class="flex justify-between mb-1"><span class="opacity-75">Red (HTTP GET):</span><span id="auth-net-ms"></span></div>
+            <div class="flex justify-between mb-1"><span class="opacity-75">Auth (SOAP WSSecurity):</span><span id="auth-soap-ms"></span></div>
+            <div class="flex justify-between font-bold pt-2 border-t border-current/20 mt-2"><span class="opacity-75">Organización:</span><span id="auth-org-name" class="text-brand"></span></div>
+          </div>
+          <!-- Error Auth -->
+          <div id="auth-error-box" class="hidden mt-4 p-4 rounded-lg text-xs font-mono bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:border-red-500/30 dark:text-red-400 whitespace-pre-wrap break-words"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tráfico Chart -->
+    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm lg:col-span-1 p-5">
+      <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Tráfico en Vivo</h2>
+      <div id="chart-traffic" class="w-full"></div>
+    </div>
+
+    <!-- Memoria Chart -->
+    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm lg:col-span-1 p-5 relative">
+      <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Uso de Memoria</h2>
+      <div id="chart-mem" class="w-full flex justify-center"></div>
+      <div class="absolute bottom-6 left-0 right-0 text-center text-xs text-slate-400 font-mono" id="k-mem-sub"></div>
+    </div>
+
   </div>
-  <div class="controls">
-   <span class="seg" id="src-seg">
-    <button data-src="file" class="on">Archivo</button>
-    <button data-src="db">Base de datos</button>
-   </span>
-   <select id="f-level">
-    <option value="">Todos los niveles</option>
-    <option value="ERR">Errores</option>
-    <option value="WRN">Advertencias</option>
-    <option value="INF">Información</option>
-   </select>
-   <select id="f-take">
-    <option value="100">100</option>
-    <option value="200" selected>200</option>
-    <option value="500">500</option>
-   </select>
-   <input type="search" id="f-search" placeholder="filtrar en el mensaje…">
-   <button class="btn" id="f-refresh">Refrescar</button>
+
+  <!-- Logs Table -->
+  <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-[500px]">
+    
+    <div class="bg-slate-50 dark:bg-[#132235] border-b border-borderLight dark:border-borderDark p-4 flex flex-wrap gap-4 justify-between items-center">
+      <div class="flex items-center gap-2">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500">Historial de Eventos</h2>
+        <span class="px-2 py-0.5 rounded text-xs bg-brand/10 text-brand font-medium">Filtrado al usuario activo</span>
+      </div>
+      <div class="flex flex-wrap gap-3 items-center">
+        <div class="inline-flex rounded-lg border border-borderLight dark:border-borderDark overflow-hidden bg-cardLight dark:bg-cardDark text-sm">
+          <button class="px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-300" id="btn-src-file">Archivo local</button>
+          <div class="w-px bg-borderLight dark:bg-borderDark"></div>
+          <button class="px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-300" id="btn-src-db">Base de datos</button>
+        </div>
+        <select id="f-level" class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand">
+          <option value="">Todos los niveles</option>
+          <option value="ERR">Errores</option>
+          <option value="WRN">Advertencias</option>
+          <option value="INF">Información</option>
+        </select>
+        <select id="f-take" class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand w-20">
+          <option value="100">100</option>
+          <option value="200" selected>200</option>
+          <option value="500">500</option>
+        </select>
+        <input type="search" id="f-search" placeholder="Filtrar en el mensaje…" class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand w-64 placeholder-slate-400">
+        <button id="f-refresh" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-borderLight dark:border-borderDark rounded-lg px-4 py-1.5 text-sm font-medium transition-colors">
+          Refrescar
+        </button>
+      </div>
+    </div>
+
+    <div class="overflow-auto flex-1 relative">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-cardLight dark:bg-[#0E1A29] sticky top-0 z-10 shadow-[0_1px_0_var(--tw-border-opacity)] border-borderLight dark:border-borderDark">
+          <tr>
+            <th class="py-3 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider border-b border-borderLight dark:border-borderDark whitespace-nowrap">Fecha / Hora</th>
+            <th class="py-3 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider border-b border-borderLight dark:border-borderDark w-24">Nivel</th>
+            <th class="py-3 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider border-b border-borderLight dark:border-borderDark w-48">Origen</th>
+            <th class="py-3 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider border-b border-borderLight dark:border-borderDark">Mensaje</th>
+          </tr>
+        </thead>
+        <tbody id="log-list" class="divide-y divide-borderLight dark:divide-borderDark text-sm">
+          <tr><td colspan="4" class="py-8 text-center text-slate-500">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
   </div>
-  <div class="logs" id="log-list"><div class="empty">Cargando…</div></div>
- </div>
 </main>
 
 <script>
+// ==================== THEME & UTILS ====================
+const html = document.documentElement;
+const themeBtn = document.getElementById('theme-btn');
+const themeIcon = document.getElementById('theme-icon');
+const storedTheme = localStorage.getItem('hgt-theme');
+
+if (storedTheme === 'light') html.classList.remove('dark');
+else if (storedTheme === 'dark') html.classList.add('dark');
+else html.classList.add('dark'); // default orquestador
+
+function updateThemeBtn() {
+  const isDark = html.classList.contains('dark');
+  themeIcon.innerHTML = isDark 
+    ? '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>'
+    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>';
+  
+  if(trafficChart && memoryChart) {
+    const mode = isDark ? 'dark' : 'light';
+    const trackColor = isDark ? '#1E314A' : '#e2e8f0';
+    const textColor = isDark ? '#e2e8f0' : '#0f172a';
+    trafficChart.updateOptions({ theme: { mode } });
+    memoryChart.updateOptions({ 
+      theme: { mode },
+      plotOptions: { radialBar: { track: { background: trackColor }, dataLabels: { value: { color: textColor } } } }
+    });
+  }
+}
+
+themeBtn.onclick = () => {
+  if (html.classList.contains('dark')) {
+    html.classList.remove('dark');
+    localStorage.setItem('hgt-theme', 'light');
+  } else {
+    html.classList.add('dark');
+    localStorage.setItem('hgt-theme', 'dark');
+  }
+  updateThemeBtn();
+};
+
 const $ = s => document.querySelector(s);
 const esc = s => (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const nf = n => (n==null?'—':Number(n).toLocaleString('es-CL'));
-let state = { source:'file', level:'', take:'200', search:'', entries:[] };
 
+// ==================== APEXCHARTS ====================
+let trafficChart, memoryChart;
+const hist = { req: Array(20).fill(0), lat: Array(20).fill(0), times: Array(20).fill('') };
+
+function initCharts() {
+  const isDark = html.classList.contains('dark');
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+  
+  trafficChart = new ApexCharts($("#chart-traffic"), {
+    chart: { type: 'area', height: 220, animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 1000 } }, toolbar: { show: false }, background: 'transparent' },
+    stroke: { curve: 'smooth', width: 2 },
+    colors: ['#ea580c', '#3b82f6'],
+    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0, stops: [0, 90, 100] } },
+    dataLabels: { enabled: false },
+    series: [
+      { name: 'Req/min', data: hist.req },
+      { name: 'Latencia (ms)', data: hist.lat }
+    ],
+    xaxis: { categories: hist.times, labels: { style: { colors: textColor } }, axisBorder: { show: false }, axisTicks: { show: false } },
+    yaxis: [
+      { min: 0, labels: { style: { colors: textColor } }, title: { text: 'Req/min', style:{color:textColor, fontWeight:500} } },
+      { min: 0, opposite: true, labels: { style: { colors: textColor } }, title: { text: 'Latencia (ms)', style:{color:textColor, fontWeight:500} } }
+    ],
+    theme: { mode: isDark ? 'dark' : 'light' },
+    legend: { show: false }
+  });
+  trafficChart.render();
+
+  memoryChart = new ApexCharts($("#chart-mem"), {
+    chart: { type: 'radialBar', height: 260, background: 'transparent' },
+    colors: ['#ea580c'],
+    series: [0],
+    plotOptions: {
+      radialBar: {
+        hollow: { size: '65%' },
+        track: { background: isDark ? '#1E314A' : '#e2e8f0' },
+        dataLabels: { 
+          name: { show: true, color: textColor, fontSize: '12px', offsetY: -10 }, 
+          value: { show: true, fontSize: '24px', fontWeight: 600, color: isDark ? '#e2e8f0' : '#0f172a', formatter: function (val) { return val + "%" } } 
+        }
+      }
+    },
+    labels: ['RAM Utilizada'],
+    theme: { mode: isDark ? 'dark' : 'light' }
+  });
+  memoryChart.render();
+}
+
+// ==================== DATA FETCHING ====================
 async function api(path, {timeout}={}){
- const ctrl = timeout ? new AbortController() : null;
- const t = timeout ? setTimeout(()=>ctrl.abort(), timeout) : null;
- try{ const r = await fetch(path, {headers:{Accept:'application/json'}, signal:ctrl?.signal}); return await r.json(); }
- finally{ if(t) clearTimeout(t); }
+  const ctrl = timeout ? new AbortController() : null;
+  const t = timeout ? setTimeout(()=>ctrl.abort(), timeout) : null;
+  try{ const r = await fetch(path, {headers:{Accept:'application/json'}, signal:ctrl?.signal}); return await r.json(); }
+  finally{ if(t) clearTimeout(t); }
 }
 
 async function loadPerf(){
- try{
-  const d = await api('/diagnostics/perf');
-  $('#envname').textContent = d.app.environment;
-  const prd = /prod/i.test(d.app.environment);
-  $('#envdot').style.color = prd ? 'var(--danger)' : 'var(--brand)';
-  $('#envpill').style.borderColor = prd ? 'rgba(239,68,68,.4)' : 'var(--border2)';
-  $('#k-up').textContent = d.app.uptime;
-  $('#k-up-sub').textContent = 'desde ' + new Date(d.app.startedUtc).toLocaleString('es-CL');
-  $('#k-req').textContent = nf(d.traffic.totalRequests);
-  $('#k-req-sub').textContent = d.traffic.requestsPerMin + '/min';
-  $('#k-err').textContent = nf(d.traffic.totalErrors);
-  $('#k-err').style.color = d.traffic.totalErrors>0 ? 'var(--danger)' : '';
-  $('#k-lat').textContent = d.traffic.averageMs + ' ms';
-  $('#k-mem').textContent = d.process.workingSetMB + ' MB';
-  $('#k-mem-sub').textContent = 'heap ' + d.process.gcHeapMB + ' MB';
-  $('#e-env').textContent = d.app.environment;
-  $('#e-host').textContent = d.app.machine;
-  $('#e-net').textContent = '.NET ' + d.app.dotnet;
-  $('#e-thr').textContent = d.process.threads + ' hilos · ' + d.process.cpuTotalSec + ' s';
-  $('#e-cache').textContent = (d.cache.enabled?'activo':'inactivo') + ' · exp ' + d.cache.expirationMinutes + ' min';
- }catch(e){ /* silencioso */ }
+  try{
+    const d = await api('/diagnostics/perf');
+    $('#envname').textContent = d.app.environment;
+    const prd = /prod/i.test(d.app.environment);
+    $('#envdot').className = prd ? 'w-2 h-2 rounded-full bg-red-500' : 'w-2 h-2 rounded-full bg-emerald-500';
+    $('#envpill').className = `flex items-center gap-2 px-3 py-1 rounded-full border text-sm font-medium ${prd ? 'border-red-500/30 bg-red-50 dark:bg-red-900/20 text-red-600' : 'border-borderLight dark:border-borderDark bg-slate-50 dark:bg-slate-800/50'}`;
+    
+    $('#k-up').textContent = d.app.uptime;
+    $('#k-up-sub').textContent = 'desde ' + new Date(d.app.startedUtc).toLocaleString('es-CL');
+    $('#k-err').textContent = nf(d.traffic.totalErrors);
+    if(d.traffic.totalErrors > 0) $('#k-err').className = 'text-2xl font-bold text-red-500';
+    
+    $('#e-host').textContent = d.app.machine;
+    $('#e-net').textContent = '.NET ' + d.app.dotnet;
+    $('#e-thr').textContent = d.process.threads + ' hilos';
+    $('#e-cache').textContent = (d.cache.enabled?'activo':'inact');
+
+    // Update Charts
+    if(trafficChart && memoryChart) {
+      const now = new Date();
+      hist.times.push(now.getSeconds() + 's');
+      hist.req.push(d.traffic.requestsPerMin);
+      hist.lat.push(d.traffic.averageMs);
+      
+      hist.times.shift();
+      hist.req.shift();
+      hist.lat.shift();
+
+      trafficChart.updateSeries([
+        { name: 'Req/min', data: hist.req },
+        { name: 'Latencia (ms)', data: hist.lat }
+      ]);
+      trafficChart.updateOptions({ xaxis: { categories: hist.times } });
+      
+      const memPct = Math.min(100, Math.round((d.process.workingSetMB / 500) * 100)); // Escala base 500MB
+      memoryChart.updateSeries([memPct]);
+      $('#k-mem-sub').textContent = `${d.process.workingSetMB} MB (Heap: ${d.process.gcHeapMB} MB)`;
+    }
+  }catch(e){ console.error(e); }
 }
 
 async function loadEam(){
- const tag=$('#eam-tag'), box=$('#eam-err');
- try{
-  const d = await api('/diagnostics/eam', {timeout:20000});
-  const ok = d.ok===true;
-  $('#k-eam').textContent = ok?'En línea':'Caído';
-  $('#k-eam').style.color = ok?'var(--success)':'var(--danger)';
-  $('#k-eam-sub').textContent = (d.elapsedMs!=null?d.elapsedMs+' ms':'') ;
-  tag.textContent = ok?'Conectado':'Caído';
-  tag.style.background = ok?'rgba(16,185,129,.16)':'rgba(239,68,68,.16)';
-  tag.style.color = ok?'#6ee7b7':'#fca5a5';
-  $('#eam-target').textContent = d.target || '—';
-  $('#eam-proxy').textContent = d.proxy || '—';
-  $('#eam-http').textContent = (d.httpStatus?('HTTP '+d.httpStatus+' · '):'') + (d.elapsedMs!=null?d.elapsedMs+' ms':'—');
-  $('#eam-check').textContent = d.checkedAtUtc ? new Date(d.checkedAtUtc).toLocaleString('es-CL') : '—';
-  if(d.error || d.message){ box.textContent = d.error || d.message; box.classList.remove('hidden'); }
-  else box.classList.add('hidden');
- }catch(e){
-  $('#k-eam').textContent='Sin respuesta'; $('#k-eam').style.color='var(--warning)';
-  tag.textContent='Timeout'; tag.style.background='rgba(245,158,11,.16)'; tag.style.color='#fcd34d';
-  box.textContent='La sonda no respondió dentro del límite del panel (20 s).'; box.classList.remove('hidden');
- }
-}
-
-function renderLogs(){
- const q = state.search.trim().toLowerCase();
- const rows = state.entries.filter(e => !q || (e.message+' '+(e.source||'')+' '+(e.detail||'')).toLowerCase().includes(q));
- const list = $('#log-list');
- if(!rows.length){ list.innerHTML = '<div class="empty">Sin entradas para mostrar.</div>'; return; }
- list.innerHTML = rows.map((e,i)=>{
-  const lv = e.level||'INF';
-  const det = e.detail ? `<button class="expand" data-i="${i}">▸ ver detalle</button><pre class="detail hidden" id="det-${i}">${esc(e.detail)}</pre>` : '';
-  return `<div class="logrow ${lv}">
-    <div class="lmeta"><span class="mono">${esc(e.ts)}</span><span class="badge b-${lv}">${lv}</span>${e.source?`<span>${esc(e.source)}</span>`:''}</div>
-    <div class="lmsg">${esc(e.message)}</div>${det}</div>`;
- }).join('');
- list.querySelectorAll('.expand').forEach(b=>b.onclick=()=>{
-  const p=$('#det-'+b.dataset.i); p.classList.toggle('hidden');
-  b.textContent=(p.classList.contains('hidden')?'▸ ver detalle':'▾ ocultar detalle');
- });
-}
-
-async function loadLogs(){
- const list=$('#log-list'); list.innerHTML='<div class="empty">Cargando…</div>';
- try{
-  const d = await api(`/diagnostics/logs?source=${state.source}&take=${state.take}&level=${encodeURIComponent(state.level)}`);
-  state.entries = d.entries || [];
-  if(!d.available){
-   $('#log-meta').textContent='';
-   list.innerHTML = `<div class="empty">${esc(d.error || d.message || 'Sin datos.')}</div>`;
-   return;
+  const tag = $('#eam-tag');
+  tag.textContent = '...'; tag.className = 'px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400';
+  try{
+    const d = await api('/diagnostics/eam', {timeout:20000});
+    const ok = d.ok===true;
+    tag.textContent = ok ? 'En Línea' : 'Caído';
+    tag.className = `px-3 py-1 rounded-full text-xs font-bold ${ok ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`;
+    
+    $('#eam-target').textContent = d.url || '—';
+    $('#eam-proxy').textContent = d.proxy || 'Ninguno';
+  }catch(e){
+    tag.textContent = 'Timeout';
+    tag.className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400';
   }
-  $('#log-meta').textContent = (d.source==='db'?('tabla '+(d.table||'')):(d.file||'')) + ' · ' + (d.count||0) + ' entradas';
-  renderLogs();
- }catch(e){ list.innerHTML = '<div class="empty">Error consultando el registro.</div>'; }
 }
 
-$('#src-seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
- $('#src-seg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
- b.classList.add('on'); state.source=b.dataset.src; loadLogs();
-});
-$('#f-level').onchange = e=>{ state.level=e.target.value; loadLogs(); };
-$('#f-take').onchange = e=>{ state.take=e.target.value; loadLogs(); };
-$('#f-search').oninput = e=>{ state.search=e.target.value; renderLogs(); };
+// ==================== LOGS LOGIC ====================
+let logState = { source:'file', level:'', take:'200', search:'', entries:[] };
+
+function renderLogs() {
+  const tbody = $('#log-list');
+  const q = logState.search.toLowerCase();
+  const f = logState.entries.filter(e => {
+    if(q && !e.message.toLowerCase().includes(q) && (!e.detail || !e.detail.toLowerCase().includes(q)) && !e.source.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  if(f.length===0){
+    tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">No hay entradas que coincidan con los filtros.</td></tr>`;
+    return;
+  }
+
+  let html = '';
+  for(let e of f){
+    let c = '';
+    let badge = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+    if(e.level==='ERR' || e.level==='FTL'){
+      c = 'bg-red-50 dark:bg-red-900/10';
+      badge = 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400';
+    }else if(e.level==='WRN'){
+      c = 'bg-amber-50 dark:bg-amber-900/10';
+      badge = 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400';
+    }
+    
+    let det = e.detail ? `<div class="mt-2 text-xs text-slate-500 font-mono whitespace-pre-wrap">${esc(e.detail)}</div>` : '';
+    
+    html += `<tr class="${c} hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+      <td class="py-3 px-4 whitespace-nowrap text-slate-500 border-t border-borderLight dark:border-borderDark">${esc(e.ts)}</td>
+      <td class="py-3 px-4 whitespace-nowrap border-t border-borderLight dark:border-borderDark"><span class="px-2 py-1 rounded text-xs font-medium ${badge}">${esc(e.level)}</span></td>
+      <td class="py-3 px-4 whitespace-nowrap text-brand font-medium border-t border-borderLight dark:border-borderDark">${esc(e.source)}</td>
+      <td class="py-3 px-4 break-words font-mono text-xs border-t border-borderLight dark:border-borderDark">
+         <div class="text-slate-800 dark:text-slate-200">${esc(e.message)}</div>
+         ${det}
+      </td>
+    </tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+async function loadLogs() {
+  $('#log-list').innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">Cargando...</td></tr>`;
+  try{
+    const d = await api(`/diagnostics/logs?source=${logState.source}&level=${logState.level}&take=${logState.take}`);
+    logState.entries = d.entries || [];
+    renderLogs();
+  }catch(e){
+    $('#log-list').innerHTML = `<tr><td colspan="4" class="py-8 text-center text-red-500">Error al cargar logs.</td></tr>`;
+  }
+}
+
+// ==================== BINDINGS & INIT ====================
+$('#btn-src-file').onclick = (e) => { 
+  logState.source='file'; 
+  e.target.className = 'px-4 py-1.5 bg-slate-200 dark:bg-slate-700 font-medium text-slate-800 dark:text-white transition-colors';
+  $('#btn-src-db').className = 'px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-300';
+  loadLogs(); 
+};
+$('#btn-src-db').onclick = (e) => { 
+  logState.source='db'; 
+  e.target.className = 'px-4 py-1.5 bg-slate-200 dark:bg-slate-700 font-medium text-slate-800 dark:text-white transition-colors';
+  $('#btn-src-file').className = 'px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-300';
+  loadLogs(); 
+};
+$('#btn-src-file').click();
+
+$('#f-level').onchange = e => { logState.level = e.target.value; loadLogs(); };
+$('#f-take').onchange = e => { logState.take = e.target.value; loadLogs(); };
+$('#f-search').oninput = e => { logState.search = e.target.value; renderLogs(); };
 $('#f-refresh').onclick = loadLogs;
 
-(function clock(){ const el=$('#clock'); if(el) el.textContent=new Date().toLocaleTimeString('es-CL'); setTimeout(clock,1000); })();
-loadPerf(); loadEam(); loadLogs();
-setInterval(loadPerf, 10000);
-setInterval(loadEam, 15000);
-setInterval(loadLogs, 30000);
+setInterval(()=>{ const d=new Date(); $('#clock').textContent = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0'); },1000);
+
+$('#btn-ping-auth').onclick = async () => {
+  const btn = $('#btn-ping-auth');
+  const resBox = $('#auth-result');
+  const errBox = $('#auth-error-box');
+  
+  btn.disabled = true;
+  btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Validando...`;
+  resBox.classList.add('hidden');
+  errBox.classList.add('hidden');
+  
+  try {
+    const d = await api('/diagnostics/eam-auth');
+    resBox.classList.remove('hidden');
+    resBox.className = `mt-4 p-4 rounded-lg text-sm border font-mono ${d.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-500/30 dark:text-emerald-400' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-500/30 dark:text-red-400'}`;
+    
+    $('#auth-net-ms').textContent = d.network.ok ? `${d.network.elapsedMs} ms` : 'Fallo';
+    $('#auth-soap-ms').textContent = d.auth.ok ? `${d.auth.elapsedMs} ms` : 'Fallo';
+    $('#auth-org-name').textContent = d.organization || 'No def.';
+    
+    if(!d.ok) {
+      errBox.classList.remove('hidden');
+      errBox.textContent = (d.network.error || '') + '\n' + (d.auth.error || '');
+    }
+  } catch(e) {
+    errBox.classList.remove('hidden');
+    errBox.textContent = 'Error de conexión con el controlador.';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `Validar Organización (Ping Auth)`;
+  }
+};
+
+updateThemeBtn();
+initCharts();
+loadPerf(); loadEam();
+setInterval(loadPerf, 5000);
 </script>
 </body>
 </html>

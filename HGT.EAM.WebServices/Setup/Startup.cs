@@ -183,5 +183,10 @@ public class Startup(IConfiguration configuration)
         // Panel interno de diagnóstico (/diagnostics): métricas + HttpClient para la sonda a EAM.
         services.AddSingleton<DiagnosticsMetrics>();
         services.AddHttpClient();
+        services.AddHttpClient("eam-probe")
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            });
     }
 }

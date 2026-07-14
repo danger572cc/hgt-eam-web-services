@@ -13,7 +13,7 @@ public class QueryParamsValidationMiddleware
 
     private const int LAST_MONTH = 12;
 
-    private readonly int startYear = DateTime.Now.AddYears(-1).Year;
+    private readonly int startYear = DateTime.Now.AddYears(-2).Year;
 
     public QueryParamsValidationMiddleware(RequestDelegate next)
     {

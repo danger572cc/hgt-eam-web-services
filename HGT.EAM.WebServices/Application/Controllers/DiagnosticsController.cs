@@ -102,6 +102,110 @@ public class DiagnosticsController : ControllerBase
     }
 
     /// <summary>
+    /// Sonda combinada: Network Ping + SOAP Auth Ping a la organización configurada.
+    /// </summary>
+    [HttpGet("eam-auth")]
+    public async Task<IActionResult> EamAuth(CancellationToken cancellationToken)
+    {
+        var baseUrl = _configuration["EAMBaseUrl"];
+        var org = _configuration["EAMCredentials:0:Organization"] ?? "(sin organización)";
+        var user = _configuration["EAMCredentials:0:Username"] ?? "";
+
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            return Ok(new { ok = false, organization = org, error = "EAMBaseUrl no configurado." });
+
+        var stopwatch = Stopwatch.StartNew();
+        var client = _httpClientFactory.CreateClient("eam-probe");
+        client.Timeout = TimeSpan.FromSeconds(15);
+        
+        bool networkOk = false;
+        long networkMs = 0;
+        string networkError = "";
+        
+        // 1. Network Ping
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, baseUrl);
+            using var res = await client.SendAsync(req, cancellationToken);
+            networkOk = true;
+            networkMs = stopwatch.ElapsedMilliseconds;
+        }
+        catch (Exception ex)
+        {
+            networkError = FlattenException(ex);
+        }
+
+        // 2. Auth Ping (SOAP WSSecurity)
+        bool authOk = false;
+        long authMs = 0;
+        string authError = "";
+        
+        if (networkOk)
+        {
+            var swAuth = Stopwatch.StartNew();
+            try
+            {
+                var pass = _configuration["EAMCredentials:0:Password"] ?? "";
+                string soapRequest = $@"<?xml version=""1.0"" encoding=""utf-8""?>
+<soap:Envelope xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/"">
+  <soap:Header>
+    <Security xmlns=""http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"">
+      <UsernameToken>
+        <Username>{user}</Username>
+        <Password>{pass}</Password>
+      </UsernameToken>
+    </Security>
+    <Organization xmlns=""http://schemas.datastream.net/MP_functions"">{org}</Organization>
+  </soap:Header>
+  <soap:Body><Ping/></soap:Body>
+</soap:Envelope>";
+
+                using var authReq = new HttpRequestMessage(HttpMethod.Post, baseUrl);
+                authReq.Content = new StringContent(soapRequest, System.Text.Encoding.UTF8, "text/xml");
+                authReq.Headers.Add("SOAPAction", "\"\"");
+                
+                using var authRes = await client.SendAsync(authReq, cancellationToken);
+                var content = await authRes.Content.ReadAsStringAsync(cancellationToken);
+                swAuth.Stop();
+                authMs = swAuth.ElapsedMilliseconds;
+
+                if (content.Contains("Invalid user", StringComparison.OrdinalIgnoreCase) || 
+                    content.Contains("Invalid password", StringComparison.OrdinalIgnoreCase) ||
+                    content.Contains("authentication", StringComparison.OrdinalIgnoreCase))
+                {
+                    authOk = false;
+                    authError = "Fallo de autenticación en EAM (Credenciales inválidas).";
+                }
+                else
+                {
+                    authOk = true; // El servidor aceptó la llamada (aunque devuelva fault por <Ping/>)
+                    if (!authRes.IsSuccessStatusCode)
+                    {
+                        var match = Regex.Match(content, @"<faultstring>(.*?)</faultstring>", RegexOptions.IgnoreCase);
+                        if (match.Success) authError = match.Groups[1].Value; 
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                authError = FlattenException(ex);
+            }
+        }
+        stopwatch.Stop();
+        
+        return Ok(new
+        {
+            ok = networkOk && authOk,
+            organization = org,
+            user = user,
+            network = new { ok = networkOk, elapsedMs = networkMs, error = networkError },
+            auth = new { ok = authOk, elapsedMs = authMs, error = authError },
+            totalElapsedMs = stopwatch.ElapsedMilliseconds,
+            checkedAtUtc = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
     /// Visor de log. <paramref name="source"/> = "file" (archivo rotativo de Serilog) o "db"
     /// (la tabla donde escribe el sink MSSqlServer, p. ej. U5HGTEAMWEB). Devuelve entradas
     /// estructuradas { ts, level, source, message, detail }.
@@ -114,9 +218,11 @@ public class DiagnosticsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         take = Math.Clamp(take, 1, 2000);
+        string? authenticatedUser = User?.Identity?.IsAuthenticated == true ? User.Identity.Name : null;
+
         if (string.Equals(source, "db", StringComparison.OrdinalIgnoreCase))
-            return await ReadDbLogsAsync(take, level, cancellationToken);
-        return ReadFileLogs(take, level);
+            return await ReadDbLogsAsync(take, level, authenticatedUser, cancellationToken);
+        return ReadFileLogs(take, level, authenticatedUser);
     }
 
     /// <summary>Métricas de rendimiento: uptime, memoria, CPU, tráfico y caché.</summary>
@@ -165,7 +271,7 @@ public class DiagnosticsController : ControllerBase
 
     // ---------- fuente: archivo ----------
 
-    private IActionResult ReadFileLogs(int take, string? level)
+    private IActionResult ReadFileLogs(int take, string? level, string? userFilter)
     {
         var logsDir = Path.Combine(_env.ContentRootPath, "logs");
         if (!Directory.Exists(logsDir))
@@ -179,7 +285,7 @@ public class DiagnosticsController : ControllerBase
         if (file is null)
             return Ok(new { available = false, source = "file", message = "No hay archivos .log.", dir = logsDir, entries = Array.Empty<object>() });
 
-        var entries = ReadFileEntries(file.FullName, take, level);
+        var entries = ReadFileEntries(file.FullName, take, level, userFilter);
         return Ok(new { available = true, source = "file", file = file.Name, dir = logsDir, count = entries.Count, entries });
     }
 
@@ -188,7 +294,7 @@ public class DiagnosticsController : ControllerBase
     /// tolerando los formatos de esta API (<c>[fecha NIVEL] [Origen] msg</c>) y el de otros
     /// servicios (<c>fecha [NIVEL] msg {json}</c>). Los stack traces multilínea quedan en <c>detail</c>.
     /// </summary>
-    private static List<object> ReadFileEntries(string path, int take, string? level)
+    private static List<object> ReadFileEntries(string path, int take, string? level, string? userFilter)
     {
         const long maxBytes = 512 * 1024;
         string content;
@@ -226,6 +332,14 @@ public class DiagnosticsController : ControllerBase
             var detail = entry.Count > 1 ? string.Join("\n", entry.Skip(1)).TrimEnd() : "";
             var parsed = ParseHeader(header);
             if (wanted != null && parsed.level != wanted) continue;
+            
+            // Filtro por usuario autenticado
+            if (!string.IsNullOrWhiteSpace(userFilter))
+            {
+                bool hasUser = entry.Any(l => l.Contains(userFilter, StringComparison.OrdinalIgnoreCase));
+                if (!hasUser) continue;
+            }
+            
             result.Add(new { ts = parsed.ts, level = parsed.level, source = parsed.source, message = parsed.message, detail });
         }
         return result.Skip(Math.Max(0, result.Count - take)).ToList();
@@ -271,11 +385,11 @@ public class DiagnosticsController : ControllerBase
 
     // ---------- fuente: base de datos (tabla del sink MSSqlServer) ----------
 
-    private async Task<IActionResult> ReadDbLogsAsync(int take, string? level, CancellationToken ct)
+    private async Task<IActionResult> ReadDbLogsAsync(int take, string? level, string? userFilter, CancellationToken ct)
     {
         var (conn, table) = ResolveLogDb();
         if (string.IsNullOrWhiteSpace(conn))
-            return Ok(new { available = false, source = "db", message = "No se encontró la cadena de conexión del sink MSSqlServer (Serilog) ni Diagnostics:LogConnectionString.", entries = Array.Empty<object>() });
+            return Ok(new { available = false, source = "db", message = "No se encontró la cadena de conexión del sink MSSqlServer.", entries = Array.Empty<object>() });
 
         var safeTable = SanitizeTable(table);
         try
@@ -284,12 +398,17 @@ public class DiagnosticsController : ControllerBase
             await using var cn = new SqlConnection(conn);
             await cn.OpenAsync(ct);
 
-            var where = string.IsNullOrWhiteSpace(level) ? "" : " WHERE [Level] = @lvl";
+            var conditions = new List<string>();
+            if (!string.IsNullOrWhiteSpace(level)) conditions.Add("[Level] = @lvl");
+            if (!string.IsNullOrWhiteSpace(userFilter)) conditions.Add("[CurrentUser] = @usr");
+            
+            var where = conditions.Count > 0 ? " WHERE " + string.Join(" AND ", conditions) : "";
             var sql = $"SELECT TOP (@n) [TimeStamp],[Level],[Message],[Exception],[RequestPath],[CurrentUser] FROM {safeTable}{where} ORDER BY [Id] DESC";
 
             await using var cmd = new SqlCommand(sql, cn);
             cmd.Parameters.AddWithValue("@n", take);
             if (!string.IsNullOrWhiteSpace(level)) cmd.Parameters.AddWithValue("@lvl", FullLevel(level));
+            if (!string.IsNullOrWhiteSpace(userFilter)) cmd.Parameters.AddWithValue("@usr", userFilter);
 
             await using var r = await cmd.ExecuteReaderAsync(ct);
             while (await r.ReadAsync(ct))
