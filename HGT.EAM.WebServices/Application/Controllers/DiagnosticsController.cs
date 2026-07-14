@@ -108,8 +108,11 @@ public class DiagnosticsController : ControllerBase
     public async Task<IActionResult> EamAuth(CancellationToken cancellationToken)
     {
         var baseUrl = _configuration["EAMBaseUrl"];
-        var org = _configuration["EAMCredentials:0:Organization"] ?? "(sin organización)";
-        var user = _configuration["EAMCredentials:0:Username"] ?? "";
+        // Organización y credenciales del USUARIO AUTENTICADO (claims puestos por la Basic Auth en
+        // AuthorizationExtensions), NO de un índice fijo: el ping valida contra la organización con
+        // la que se autenticó quien llama al panel.
+        var user = User?.Identity?.Name ?? "";
+        var org = User?.FindFirst("Organization")?.Value ?? "(sin organización)";
 
         if (string.IsNullOrWhiteSpace(baseUrl))
             return Ok(new { ok = false, organization = org, error = "EAMBaseUrl no configurado." });
@@ -145,7 +148,7 @@ public class DiagnosticsController : ControllerBase
             var swAuth = Stopwatch.StartNew();
             try
             {
-                var pass = _configuration["EAMCredentials:0:Password"] ?? "";
+                var pass = User?.FindFirst("Password")?.Value ?? "";
                 string soapRequest = $@"<?xml version=""1.0"" encoding=""utf-8""?>
 <soap:Envelope xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/"">
   <soap:Header>

@@ -183,10 +183,22 @@ public class Startup(IConfiguration configuration)
         // Panel interno de diagnóstico (/diagnostics): métricas + HttpClient para la sonda a EAM.
         services.AddSingleton<DiagnosticsMetrics>();
         services.AddHttpClient();
-        services.AddHttpClient("eam-probe")
-            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        // Sonda a EAM: en QAS/Stage/Dev los certificados tienen nombre/cadena inválidos, así que se
+        // IGNORAN los errores de certificado FUERA de Producción. En Producción se mantiene la
+        // validación TLS estricta (la sonda de Auth envía credenciales del usuario; no se puede
+        // aceptar cualquier certificado). Override explícito: EamProbe:IgnoreCertificateErrors.
+        var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                      ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production";
+        var isProduction = string.Equals(envName, "Production", StringComparison.OrdinalIgnoreCase);
+        var ignoreCertErrors = configuration.GetValue<bool?>("EamProbe:IgnoreCertificateErrors") ?? !isProduction;
+
+        var eamProbe = services.AddHttpClient("eam-probe");
+        if (ignoreCertErrors)
+        {
+            eamProbe.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
             });
+        }
     }
 }
