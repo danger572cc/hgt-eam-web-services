@@ -40,7 +40,7 @@ public class Startup(IConfiguration configuration)
             options.DarkMode = false;
             options.HideDarkModeToggle = false;
             options.DefaultOpenAllTags = true;
-            options.Favicon = "/images/favicon.ico";
+            options.Favicon = "https://latinamerica.hanseaticglobalterminals.com/wp-content/uploads/2025/06/fav-icon-HGT.png";
             options.HeadContent = @"<div style='position:fixed;top:0;left:0;width:100%;height:4.5%;z-index:100;color:white;background-color: #222A36 !important;'><a href='https://www.aep.cl/'><img src='https://www.aep.cl/wp-content/uploads/2025/07/logoHGT-blanco.png' alt='Hanseatic Global Terminals' style='width: 7%;margin-top: 5px;'></a></div>";
         });
         app.UseMiddleware<DiagnosticsMetricsMiddleware>();

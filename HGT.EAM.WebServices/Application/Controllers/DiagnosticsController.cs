@@ -2,6 +2,7 @@ using HGT.EAM.WebServices.Infrastructure.Architecture.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
@@ -270,6 +271,216 @@ public class DiagnosticsController : ControllerBase
                 database = _configuration.GetConnectionString("GridCache")
             }
         });
+    }
+
+    /// <summary>
+    /// Salud del archivo SQLite del caché de grillas. Responde a "¿el error de la API viene del
+    /// archivo SQLite?": ruta REAL que abre SQLite, existencia, tamaño, última escritura, integridad
+    /// (<c>PRAGMA quick_check</c>), modo de journal, espera ante lock, tablas/filas cacheadas y el
+    /// error REAL si algo falla. La sonda abre en SOLO LECTURA: nunca crea el archivo si la ruta está
+    /// mal configurada ni toma locks de escritura sobre el caché en uso.
+    /// </summary>
+    [HttpGet("sqlite")]
+    public async Task<IActionResult> Sqlite(CancellationToken cancellationToken)
+    {
+        var rawConnectionString = _configuration.GetConnectionString("GridCache") ?? "Data Source=gridcache.db";
+
+        string dataSource;
+        int busyTimeoutSeconds;
+        SqliteOpenMode mode;
+        try
+        {
+            var parsed = new SqliteConnectionStringBuilder(rawConnectionString);
+            dataSource = parsed.DataSource;
+            busyTimeoutSeconds = parsed.DefaultTimeout;
+            mode = parsed.Mode;
+        }
+        catch (Exception ex)
+        {
+            return Ok(new
+            {
+                ok = false,
+                stage = "cadena de conexión",
+                error = FlattenException(ex),
+                checkedAtUtc = DateTime.UtcNow
+            });
+        }
+
+        // Caché en memoria: no hay archivo que revisar.
+        if (string.IsNullOrWhiteSpace(dataSource)
+            || mode == SqliteOpenMode.Memory
+            || string.Equals(dataSource, ":memory:", StringComparison.OrdinalIgnoreCase)
+            || dataSource.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+        {
+            return Ok(new
+            {
+                ok = true,
+                fileBased = false,
+                dataSource,
+                mode = mode.ToString(),
+                message = "El caché no usa un archivo en disco; no hay archivo que revisar.",
+                checkedAtUtc = DateTime.UtcNow
+            });
+        }
+
+        // SQLite resuelve las rutas relativas contra el directorio de TRABAJO del proceso, que bajo
+        // IIS o como servicio puede NO ser el ContentRoot: se reportan ambos para poder compararlos.
+        var currentDirectory = Directory.GetCurrentDirectory();
+        string path;
+        try
+        {
+            path = Path.GetFullPath(dataSource, currentDirectory);
+        }
+        catch (Exception ex)
+        {
+            return Ok(new
+            {
+                ok = false,
+                stage = "ruta",
+                dataSource,
+                error = FlattenException(ex),
+                checkedAtUtc = DateTime.UtcNow
+            });
+        }
+
+        var file = new FileInfo(path);
+        var exists = file.Exists;
+        var directoryExists = file.Directory?.Exists == true;
+
+        // Escritura: SQLite necesita escribir el .db Y crear el journal/-wal en la MISMA carpeta; una
+        // carpeta de solo lectura rompe las escrituras aunque el archivo sí sea escribible.
+        var fileWritable = exists && CanWriteFile(path);
+        var directoryWritable = directoryExists && CanWriteDirectory(file.Directory!.FullName);
+
+        var canOpen = false;
+        string? openedPath = null;
+        string? integrity = null;
+        string? journalMode = null;
+        string? stage = null;
+        string? error = null;
+        var tableStats = new List<(string Name, long? Rows)>();
+
+        if (!exists)
+        {
+            error = directoryExists
+                ? "El archivo no existe en la ruta resuelta."
+                : "No existe la carpeta que debería contener el archivo.";
+        }
+        else
+        {
+            try
+            {
+                stage = "abrir";
+                var probeConnectionString = new SqliteConnectionStringBuilder(rawConnectionString)
+                {
+                    Mode = SqliteOpenMode.ReadOnly,
+                    Pooling = false
+                }.ToString();
+
+                await using var connection = new SqliteConnection(probeConnectionString);
+                await connection.OpenAsync(cancellationToken);
+                canOpen = true;
+
+                // Ruta que SQLite abrió realmente: fuente de verdad frente a rutas relativas.
+                openedPath = await ScalarAsync(connection, "SELECT file FROM pragma_database_list WHERE name = 'main';", cancellationToken);
+                journalMode = await ScalarAsync(connection, "PRAGMA journal_mode;", cancellationToken);
+
+                stage = "quick_check";
+                integrity = await ScalarAsync(connection, "PRAGMA quick_check;", cancellationToken);
+
+                stage = "tablas";
+                foreach (var table in await ReadTableNamesAsync(connection, cancellationToken))
+                {
+                    var rows = await ScalarAsync(connection, $"SELECT COUNT(*) FROM \"{table.Replace("\"", "\"\"")}\";", cancellationToken);
+                    tableStats.Add((table, long.TryParse(rows, out var count) ? count : null));
+                }
+
+                stage = null;
+            }
+            catch (Exception ex)
+            {
+                error = FlattenException(ex);   // aquí aparece el error REAL de SQLite
+            }
+        }
+
+        return Ok(new
+        {
+            ok = exists
+                 && canOpen
+                 && string.Equals(integrity, "ok", StringComparison.OrdinalIgnoreCase)
+                 && fileWritable
+                 && directoryWritable,
+            fileBased = true,
+            path = openedPath ?? path,
+            exists,
+            sizeBytes = exists ? file.Length : (long?)null,
+            sizeMB = exists ? Math.Round(file.Length / 1048576.0, 2) : (double?)null,
+            lastWriteUtc = exists ? file.LastWriteTimeUtc : (DateTime?)null,
+            canOpen,
+            writable = fileWritable,
+            directoryWritable,
+            integrity,
+            journalMode,
+            busyTimeoutSeconds,
+            mode = mode.ToString(),
+            cachedRows = tableStats.Sum(t => t.Rows ?? 0),
+            tables = tableStats.Select(t => new { name = t.Name, rows = t.Rows }),
+            contentRoot = _env.ContentRootPath,
+            currentDirectory,
+            stage,
+            error,
+            checkedAtUtc = DateTime.UtcNow
+        });
+    }
+
+    // ---------- caché SQLite ----------
+
+    /// <summary>¿El proceso puede abrir el archivo para escritura? (permisos NTFS / atributo de solo lectura).</summary>
+    private static bool CanWriteFile(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>¿Se puede crear un archivo en la carpeta? SQLite lo necesita para el journal/-wal.</summary>
+    private static bool CanWriteDirectory(string directory)
+    {
+        var probe = Path.Combine(directory, $".diag-write-{Guid.NewGuid():N}.tmp");
+        try
+        {
+            using var stream = new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static async Task<string?> ScalarAsync(SqliteConnection connection, string sql, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        var value = await command.ExecuteScalarAsync(cancellationToken);
+        return value is null || value == DBNull.Value ? null : value.ToString();
+    }
+
+    private static async Task<List<string>> ReadTableNamesAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        var names = new List<string>();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;";
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+            names.Add(reader.GetString(0));
+        return names;
     }
 
     // ---------- fuente: archivo ----------
