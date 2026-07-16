@@ -1,3 +1,4 @@
+using HGT.EAM.WebServices.Infrastructure.Architecture.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 
 namespace HGT.EAM.WebServices.Infrastructure.Architecture.GridCache;
@@ -9,6 +10,7 @@ public class GridCacheDbContext : DbContext
     public DbSet<GridCacheEntry> GridCacheEntries => Set<GridCacheEntry>();
     public DbSet<GridCacheFieldEntity> GridCacheFields => Set<GridCacheFieldEntity>();
     public DbSet<GridCacheRowEntity> GridCacheRows => Set<GridCacheRowEntity>();
+    public DbSet<DiagnosticsHistory> DiagnosticsHistory => Set<DiagnosticsHistory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,6 +27,12 @@ public class GridCacheDbContext : DbContext
         modelBuilder.Entity<GridCacheRowEntity>(e =>
         {
             e.HasKey(x => new { x.CacheKey, x.RowIndex });
+        });
+
+        modelBuilder.Entity<DiagnosticsHistory>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.TimestampUtc);
         });
     }
 }

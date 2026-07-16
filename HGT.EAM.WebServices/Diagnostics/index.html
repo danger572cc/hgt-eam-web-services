@@ -1,483 +1,604 @@
 <!DOCTYPE html>
 <html lang="es" class="dark">
+
 <head>
-    <meta charset="utf-8">
-    <title>HGT - EAM Grid API - Diagnóstico</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="https://latinamerica.hanseaticglobalterminals.com/wp-content/uploads/2025/06/fav-icon-HGT.png" type="image/png">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  <meta charset="utf-8">
+  <title>HGT - EAM Grid API - Diagnóstico</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://latinamerica.hanseaticglobalterminals.com/wp-content/uploads/2025/06/fav-icon-HGT.png"
+    type="image/png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        /* Scrollbars elegantes */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
+    body {
+      font-family: 'Inter', sans-serif;
+    }
 
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
+    /* Scrollbars elegantes */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
 
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
 
-        .dark ::-webkit-scrollbar-thumb {
-            background: #334155;
-        }
-    </style>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: '#ea580c',     // Naranja HGT
-                        bgLight: '#f8fafc',   // Fondo claro general
-                        cardLight: '#ffffff', // Fondo tarjeta clara
-                        borderLight: '#e2e8f0', // Bordes claro
-                        bgDark: '#081320',    // Maritime Dark
-                        cardDark: '#0E1A29',  // Tarjeta Dark
-                        borderDark: '#1E314A' // Borde Dark
-                    }
-                }
-            }
-        }
-    </script>
-</head>
-<body class="bg-bgLight dark:bg-bgDark text-slate-800 dark:text-slate-200 transition-colors duration-200 antialiased min-h-screen flex flex-col">
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
 
-<!-- Top Navigation -->
-<header class="bg-cardLight dark:bg-cardDark border-b border-borderLight dark:border-borderDark sticky top-0 z-50">
-  <div class="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
-    <div class="flex items-center gap-4">
-      <img id="logo-dark" src="https://www.aep.cl/wp-content/uploads/2025/07/logoHGT-blanco.png" alt="HGT" class="h-8 hidden dark:block">
-      <img id="logo-light" src="https://latinamerica.hanseaticglobalterminals.com/wp-content/uploads/thegem/logos/logo_2a91cc3a7496af78754d2e4a9a256f08_1x.png" alt="HGT" class="h-8 block dark:hidden"/>
-      <div class="font-bold text-xl tracking-tight text-slate-800 dark:text-white flex items-baseline gap-2">
-        HGT Grid API - EAM <span class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest">Diagnóstico</span>
-      </div>
-    </div>
-    
-    <div class="flex items-center gap-4">
-      <span class="flex items-center gap-2 px-3 py-1 rounded-full border border-borderLight dark:border-borderDark text-sm font-medium bg-slate-50 dark:bg-slate-800/50" id="envpill">
-        <span class="w-2 h-2 rounded-full bg-slate-400" id="envdot"></span>
-        <span id="envname">—</span>
-      </span>
-      <span class="text-sm font-mono text-slate-500 dark:text-slate-400" id="clock">--:--:--</span>
-      <button id="theme-btn" class="p-2 text-slate-500 hover:text-brand transition-colors rounded-lg border border-borderLight dark:border-borderDark hover:border-brand" title="Cambiar tema">
-        <svg id="theme-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
-      </button>
-    </div>
-  </div>
-</header>
-
-<main class="flex-1 max-w-[1600px] w-full mx-auto px-6 py-8 flex flex-col gap-6">
-
-  <!-- Overview Cards -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl p-5 shadow-sm">
-      <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex justify-between">Tiempo Activo <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></div>
-      <div class="text-2xl font-bold" id="k-up">—</div>
-      <div class="text-xs text-slate-400 mt-1" id="k-up-sub">Arrancando...</div>
-    </div>
-    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl p-5 shadow-sm">
-      <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex justify-between">Errores 5xx <svg class="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
-      <div class="text-2xl font-bold" id="k-err">—</div>
-      <div class="text-xs text-slate-400 mt-1">desde el arranque</div>
-    </div>
-    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl p-5 shadow-sm col-span-1 md:col-span-2">
-      <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Host & Entorno</div>
-      <div class="grid grid-cols-2 gap-4 text-sm mt-3">
-        <div class="flex justify-between border-b border-borderLight dark:border-borderDark pb-2"><span class="text-slate-500">Máquina</span><span class="font-mono text-right" id="e-host">—</span></div>
-        <div class="flex justify-between border-b border-borderLight dark:border-borderDark pb-2"><span class="text-slate-500">Runtime</span><span class="font-mono text-right" id="e-net">—</span></div>
-        <div class="flex justify-between"><span class="text-slate-500">Hilos CPU</span><span class="font-mono text-right" id="e-thr">—</span></div>
-        <div class="flex justify-between"><span class="text-slate-500">Caché</span><span class="font-mono text-right" id="e-cache">—</span></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Charts & Connectivity -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    
-    <!-- Conexión EAM -->
-    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm flex flex-col">
-      <div class="p-5 border-b border-borderLight dark:border-borderDark flex justify-between items-center">
-        <h2 class="text-sm font-semibold uppercase tracking-wider flex items-center gap-2"><svg class="w-5 h-5 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"></rect><rect x="2" y="16" width="6" height="6" rx="1"></rect><rect x="9" y="2" width="6" height="6" rx="1"></rect><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"></path><path d="M12 12V8"></path></svg> Conexión EAM</h2>
-        <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400" id="eam-tag">—</span>
-      </div>
-      <div class="p-5 flex-1 flex flex-col">
-        <div class="flex justify-between text-sm py-2 border-b border-borderLight dark:border-borderDark"><span class="text-slate-500">Destino</span><span class="font-mono" id="eam-target">—</span></div>
-        <div class="flex justify-between text-sm py-2"><span class="text-slate-500">Proxy en uso</span><span class="font-mono" id="eam-proxy">—</span></div>
-        
-        <div class="mt-auto pt-6">
-          <button id="btn-ping-auth" class="w-full bg-brand hover:bg-orange-500 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
-            Validar Organización (Ping Auth)
-          </button>
-          
-          <!-- Resultado Auth -->
-          <div id="auth-result" class="hidden mt-4 p-4 rounded-lg text-sm border font-mono">
-            <div class="flex justify-between mb-1"><span class="opacity-75">Red (HTTP GET):</span><span id="auth-net-ms"></span></div>
-            <div class="flex justify-between mb-1"><span class="opacity-75">Auth (SOAP WSSecurity):</span><span id="auth-soap-ms"></span></div>
-            <div class="flex justify-between font-bold pt-2 border-t border-current/20 mt-2"><span class="opacity-75">Organización:</span><span id="auth-org-name" class="text-brand"></span></div>
-          </div>
-          <!-- Error Auth -->
-          <div id="auth-error-box" class="hidden mt-4 p-4 rounded-lg text-xs font-mono bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:border-red-500/30 dark:text-red-400 whitespace-pre-wrap break-words"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tráfico Chart -->
-    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm lg:col-span-1 p-5">
-      <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Tráfico en Vivo</h2>
-      <div id="chart-traffic" class="w-full"></div>
-    </div>
-
-    <!-- Memoria Chart -->
-    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm lg:col-span-1 p-5 relative">
-      <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Uso de Memoria</h2>
-      <div id="chart-mem" class="w-full flex justify-center"></div>
-      <div class="absolute bottom-6 left-0 right-0 text-center text-xs text-slate-400 font-mono" id="k-mem-sub"></div>
-    </div>
-
-  </div>
-
-  <!-- Caché SQLite -->
-  <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm">
-    <div class="p-5 border-b border-borderLight dark:border-borderDark flex justify-between items-center gap-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wider flex items-center gap-2"><svg class="w-5 h-5 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg> Caché SQLite</h2>
-      <div class="flex items-center gap-3">
-        <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400" id="sq-tag">—</span>
-        <button id="sq-refresh" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-borderLight dark:border-borderDark rounded-lg px-4 py-1.5 text-sm font-medium transition-colors">Revisar</button>
-      </div>
-    </div>
-    <div class="p-5">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 text-sm">
-        <div class="flex justify-between gap-2 py-2 border-b border-borderLight dark:border-borderDark"><span class="text-slate-500 shrink-0">Archivo</span><span class="font-mono text-right truncate" id="sq-path" title="">—</span></div>
-        <div class="flex justify-between gap-2 py-2 border-b border-borderLight dark:border-borderDark"><span class="text-slate-500 shrink-0">Tamaño</span><span class="font-mono text-right" id="sq-size">—</span></div>
-        <div class="flex justify-between gap-2 py-2 border-b border-borderLight dark:border-borderDark"><span class="text-slate-500 shrink-0">Última escritura</span><span class="font-mono text-right" id="sq-write">—</span></div>
-        <div class="flex justify-between gap-2 py-2 border-b border-borderLight dark:border-borderDark"><span class="text-slate-500 shrink-0">Integridad</span><span class="font-mono text-right" id="sq-int">—</span></div>
-        <div class="flex justify-between gap-2 py-2"><span class="text-slate-500 shrink-0">¿Abre?</span><span class="font-mono text-right" id="sq-open">—</span></div>
-        <div class="flex justify-between gap-2 py-2"><span class="text-slate-500 shrink-0">¿Escribible?</span><span class="font-mono text-right" id="sq-writable">—</span></div>
-        <div class="flex justify-between gap-2 py-2"><span class="text-slate-500 shrink-0">Journal</span><span class="font-mono text-right" id="sq-journal">—</span></div>
-        <div class="flex justify-between gap-2 py-2"><span class="text-slate-500 shrink-0">Espera ante lock</span><span class="font-mono text-right" id="sq-timeout">—</span></div>
-      </div>
-      <div id="sq-tables" class="flex flex-wrap gap-2 mt-4"></div>
-      <div id="sq-error" class="hidden mt-4 p-4 rounded-lg text-xs font-mono bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:border-red-500/30 dark:text-red-400 whitespace-pre-wrap break-words"></div>
-    </div>
-  </div>
-
-  <!-- Logs Table -->
-  <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-[500px]">
-    
-    <div class="bg-slate-50 dark:bg-[#132235] border-b border-borderLight dark:border-borderDark p-4 flex flex-wrap gap-4 justify-between items-center">
-      <div class="flex items-center gap-2">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500">Historial de Eventos</h2>
-        <span class="px-2 py-0.5 rounded text-xs bg-brand/10 text-brand font-medium">Filtrado al usuario activo</span>
-      </div>
-      <div class="flex flex-wrap gap-3 items-center">
-        <div class="inline-flex rounded-lg border border-borderLight dark:border-borderDark overflow-hidden bg-cardLight dark:bg-cardDark text-sm">
-          <button class="px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-300" id="btn-src-file">Archivo local</button>
-          <div class="w-px bg-borderLight dark:bg-borderDark"></div>
-          <button class="px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-300" id="btn-src-db">Base de datos</button>
-        </div>
-        <select id="f-level" class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand">
-          <option value="">Todos los niveles</option>
-          <option value="ERR">Errores</option>
-          <option value="WRN">Advertencias</option>
-          <option value="INF">Información</option>
-        </select>
-        <select id="f-take" class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand w-20">
-          <option value="100">100</option>
-          <option value="200" selected>200</option>
-          <option value="500">500</option>
-        </select>
-        <input type="search" id="f-search" placeholder="Filtrar en el mensaje…" class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand w-64 placeholder-slate-400">
-        <button id="f-refresh" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-borderLight dark:border-borderDark rounded-lg px-4 py-1.5 text-sm font-medium transition-colors">
-          Refrescar
-        </button>
-      </div>
-    </div>
-
-    <div class="overflow-auto flex-1 relative">
-      <table class="w-full text-left border-collapse">
-        <thead class="bg-cardLight dark:bg-[#0E1A29] sticky top-0 z-10 shadow-[0_1px_0_var(--tw-border-opacity)] border-borderLight dark:border-borderDark">
-          <tr>
-            <th class="py-3 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider border-b border-borderLight dark:border-borderDark whitespace-nowrap">Fecha / Hora</th>
-            <th class="py-3 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider border-b border-borderLight dark:border-borderDark w-24">Nivel</th>
-            <th class="py-3 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider border-b border-borderLight dark:border-borderDark w-48">Origen</th>
-            <th class="py-3 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider border-b border-borderLight dark:border-borderDark">Mensaje</th>
-          </tr>
-        </thead>
-        <tbody id="log-list" class="divide-y divide-borderLight dark:divide-borderDark text-sm">
-          <tr><td colspan="4" class="py-8 text-center text-slate-500">Cargando...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-  </div>
-</main>
-
-<script>
-// ==================== THEME & UTILS ====================
-const html = document.documentElement;
-const themeBtn = document.getElementById('theme-btn');
-const themeIcon = document.getElementById('theme-icon');
-const storedTheme = localStorage.getItem('hgt-theme');
-
-if (storedTheme === 'light') html.classList.remove('dark');
-else if (storedTheme === 'dark') html.classList.add('dark');
-else html.classList.add('dark'); // default orquestador
-
-function updateThemeBtn() {
-  const isDark = html.classList.contains('dark');
-  themeIcon.innerHTML = isDark 
-    ? '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>'
-    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>';
-  if(trafficChart && memoryChart) {
-    const mode = isDark ? 'dark' : 'light';
-    const trackColor = isDark ? '#1E314A' : '#e2e8f0';
-    const textColor = isDark ? '#e2e8f0' : '#0f172a';
-    trafficChart.updateOptions({ theme: { mode } });
-    memoryChart.updateOptions({ 
-      theme: { mode },
-      plotOptions: { radialBar: { track: { background: trackColor }, dataLabels: { value: { color: textColor } } } }
-    });
-  }
-}
-
-themeBtn.onclick = () => {
-  if (html.classList.contains('dark')) {
-    html.classList.remove('dark');
-    localStorage.setItem('hgt-theme', 'light');
-  } else {
-    html.classList.add('dark');
-    localStorage.setItem('hgt-theme', 'dark');
-  }
-  updateThemeBtn();
-};
-
-const $ = s => document.querySelector(s);
-const esc = s => (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const nf = n => (n==null?'—':Number(n).toLocaleString('es-CL'));
-
-// ==================== APEXCHARTS ====================
-let trafficChart, memoryChart;
-const hist = { req: Array(20).fill(0), lat: Array(20).fill(0), times: Array(20).fill('') };
-
-function initCharts() {
-  const isDark = html.classList.contains('dark');
-  const textColor = isDark ? '#94a3b8' : '#64748b';
-  
-  trafficChart = new ApexCharts($("#chart-traffic"), {
-    chart: { type: 'area', height: 220, animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 1000 } }, toolbar: { show: false }, background: 'transparent' },
-    stroke: { curve: 'smooth', width: 2 },
-    colors: ['#ea580c', '#3b82f6'],
-    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0, stops: [0, 90, 100] } },
-    dataLabels: { enabled: false },
-    series: [
-      { name: 'Req/min', data: hist.req },
-      { name: 'Latencia (ms)', data: hist.lat }
-    ],
-    xaxis: { categories: hist.times, labels: { style: { colors: textColor } }, axisBorder: { show: false }, axisTicks: { show: false } },
-    yaxis: [
-      { min: 0, labels: { style: { colors: textColor } }, title: { text: 'Req/min', style:{color:textColor, fontWeight:500} } },
-      { min: 0, opposite: true, labels: { style: { colors: textColor } }, title: { text: 'Latencia (ms)', style:{color:textColor, fontWeight:500} } }
-    ],
-    theme: { mode: isDark ? 'dark' : 'light' },
-    legend: { show: false }
-  });
-  trafficChart.render();
-
-  memoryChart = new ApexCharts($("#chart-mem"), {
-    chart: { type: 'radialBar', height: 260, background: 'transparent' },
-    colors: ['#ea580c'],
-    series: [0],
-    plotOptions: {
-      radialBar: {
-        hollow: { size: '65%' },
-        track: { background: isDark ? '#1E314A' : '#e2e8f0' },
-        dataLabels: { 
-          name: { show: true, color: textColor, fontSize: '12px', offsetY: -10 }, 
-          value: { show: true, fontSize: '24px', fontWeight: 600, color: isDark ? '#e2e8f0' : '#0f172a', formatter: function (val) { return val + "%" } } 
+    .dark ::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: '#ea580c',     // Naranja HGT
+            bgLight: '#f8fafc',   // Fondo claro general
+            cardLight: '#ffffff', // Fondo tarjeta clara
+            borderLight: '#e2e8f0', // Bordes claro
+            bgDark: '#081320',    // Maritime Dark
+            cardDark: '#0E1A29',  // Tarjeta Dark
+            borderDark: '#1E314A' // Borde Dark
+          }
         }
       }
-    },
-    labels: ['RAM Utilizada'],
-    theme: { mode: isDark ? 'dark' : 'light' }
-  });
-  memoryChart.render();
-}
-
-// ==================== DATA FETCHING ====================
-async function api(path, {timeout}={}){
-  const ctrl = timeout ? new AbortController() : null;
-  const t = timeout ? setTimeout(()=>ctrl.abort(), timeout) : null;
-  try{ const r = await fetch(path, {headers:{Accept:'application/json'}, signal:ctrl?.signal}); return await r.json(); }
-  finally{ if(t) clearTimeout(t); }
-}
-
-async function loadPerf(){
-  try{
-    const d = await api('/diagnostics/perf');
-      $('#envname').textContent = d.app.environment === 'Development' ? 'QAS': 'Producción';
-      console.log(d.app.environment);
-    const prd = /prod/i.test(d.app.environment);
-    $('#envdot').className = prd ? 'w-2 h-2 rounded-full bg-red-500' : 'w-2 h-2 rounded-full bg-emerald-500';
-    $('#envpill').className = `flex items-center gap-2 px-3 py-1 rounded-full border text-sm font-medium ${prd ? 'border-red-500/30 bg-red-50 dark:bg-red-900/20 text-red-600' : 'border-borderLight dark:border-borderDark bg-slate-50 dark:bg-slate-800/50'}`;
-    
-    $('#k-up').textContent = d.app.uptime;
-    $('#k-up-sub').textContent = 'desde ' + new Date(d.app.startedUtc).toLocaleString('es-CL');
-    $('#k-err').textContent = nf(d.traffic.totalErrors);
-    if(d.traffic.totalErrors > 0) $('#k-err').className = 'text-2xl font-bold text-red-500';
-    
-    $('#e-host').textContent = d.app.machine;
-    $('#e-net').textContent = '.NET ' + d.app.dotnet;
-    $('#e-thr').textContent = d.process.threads + ' hilos';
-    $('#e-cache').textContent = (d.cache.enabled?'activo':'inact');
-
-    // Update Charts
-    if(trafficChart && memoryChart) {
-      const now = new Date();
-      hist.times.push(now.getSeconds() + 's');
-      hist.req.push(d.traffic.requestsPerMin);
-      hist.lat.push(d.traffic.averageMs);
-      
-      hist.times.shift();
-      hist.req.shift();
-      hist.lat.shift();
-
-      trafficChart.updateSeries([
-        { name: 'Req/min', data: hist.req },
-        { name: 'Latencia (ms)', data: hist.lat }
-      ]);
-      trafficChart.updateOptions({ xaxis: { categories: hist.times } });
-      
-      const memPct = Math.min(100, Math.round((d.process.workingSetMB / 500) * 100)); // Escala base 500MB
-      memoryChart.updateSeries([memPct]);
-      $('#k-mem-sub').textContent = `${d.process.workingSetMB} MB (Heap: ${d.process.gcHeapMB} MB)`;
     }
-  }catch(e){ console.error(e); }
-}
+  </script>
+</head>
 
-async function loadEam(){
-  const tag = $('#eam-tag');
-  tag.textContent = '...'; tag.className = 'px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400';
-  try{
-    const d = await api('/diagnostics/eam', {timeout:20000});
-    const ok = d.ok===true;
-    tag.textContent = ok ? 'En Línea' : 'Caído';
-    tag.className = `px-3 py-1 rounded-full text-xs font-bold ${ok ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`;
-    
-    $('#eam-target').textContent = d.url || '—';
-    $('#eam-proxy').textContent = d.proxy || 'Ninguno';
-  }catch(e){
-    tag.textContent = 'Timeout';
-    tag.className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400';
-  }
-}
+<body
+  class="bg-bgLight dark:bg-bgDark text-slate-800 dark:text-slate-200 transition-colors duration-200 antialiased min-h-screen flex flex-col">
 
-// ==================== CACHÉ SQLITE ====================
-const pill = 'px-3 py-1 rounded-full text-xs font-bold ';
-const sqPill = {
-  neutral: pill + 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
-  ok:      pill + 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
-  bad:     pill + 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400',
-  warn:    pill + 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
-};
-const yn = v => v===true ? 'Sí' : (v===false ? 'No' : '—');
+  <!-- Top Navigation -->
+  <header class="bg-cardLight dark:bg-cardDark border-b border-borderLight dark:border-borderDark sticky top-0 z-50">
+    <div class="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <img id="logo-dark" src="https://www.aep.cl/wp-content/uploads/2025/07/logoHGT-blanco.png" alt="HGT"
+          class="h-8 hidden dark:block">
+        <img id="logo-light"
+          src="https://latinamerica.hanseaticglobalterminals.com/wp-content/uploads/thegem/logos/logo_2a91cc3a7496af78754d2e4a9a256f08_1x.png"
+          alt="HGT" class="h-8 block dark:hidden" />
+        <div class="font-bold text-xl tracking-tight text-slate-800 dark:text-white flex items-baseline gap-2">
+          HGT Grid API - EAM <span
+            class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest">Diagnóstico</span>
+        </div>
+      </div>
 
-async function loadSqlite(){
-  const tag = $('#sq-tag');
-  const errBox = $('#sq-error');
-  tag.textContent = 'Revisando...'; tag.className = sqPill.neutral;
-  errBox.classList.add('hidden');
-  try{
-    // quick_check recorre el archivo: se le da aire suficiente en cachés grandes.
-    const d = await api('/diagnostics/sqlite', {timeout:30000});
+      <div class="flex items-center gap-4">
+          <span class="flex items-center gap-2 px-3 py-1 rounded-full border border-borderLight dark:border-borderDark text-sm font-medium bg-slate-50 dark:bg-slate-800/50"
+                id="envpill">
+              <span class="w-2 h-2 rounded-full bg-slate-400" id="envdot"></span>
+              <span id="envname">—</span>
+          </span>
+          <span class="text-sm font-mono text-slate-500 dark:text-slate-400" id="clock">--:--:--</span>
 
-    if(d.fileBased === false){
-      tag.textContent = 'En memoria'; tag.className = sqPill.neutral;
-      $('#sq-path').textContent = d.dataSource || '—';
-      return;
+          <button id="theme-btn"
+                  class="p-2 text-slate-500 hover:text-brand transition-colors rounded-lg border border-borderLight dark:border-borderDark hover:border-brand"
+                  title="Cambiar tema">
+              <svg id="theme-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+              </svg>
+          </button>
+          <button onclick="logout()"
+                  class="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 hover:bg-red-500 hover:text-white dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors rounded-lg border border-red-200 dark:border-red-500/20"
+                  title="Cerrar sesión o cambiar de terminal">
+              Cambiar terminal
+          </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-[1600px] w-full mx-auto px-6 py-8 flex flex-col gap-6">
+
+    <!-- Overview Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div
+        class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl p-5 shadow-sm">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex justify-between">Tiempo
+          Activo <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg></div>
+        <div class="text-2xl font-bold" id="k-up">—</div>
+        <div class="text-xs text-slate-400 mt-1" id="k-up-sub">Arrancando...</div>
+      </div>
+      <div
+        class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl p-5 shadow-sm">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex justify-between">Errores 5xx
+          <svg class="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg></div>
+        <div class="text-2xl font-bold" id="k-err">—</div>
+        <div class="text-xs text-slate-400 mt-1">desde el arranque</div>
+      </div>
+      <div
+        class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl p-5 shadow-sm col-span-1 md:col-span-2">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Host & Entorno</div>
+        <div class="grid grid-cols-2 gap-4 text-sm mt-3">
+          <div class="flex justify-between border-b border-borderLight dark:border-borderDark pb-2"><span
+              class="text-slate-500">Máquina</span><span class="font-mono text-right" id="e-host">—</span></div>
+          <div class="flex justify-between border-b border-borderLight dark:border-borderDark pb-2"><span
+              class="text-slate-500">Runtime</span><span class="font-mono text-right" id="e-net">—</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Hilos CPU</span><span
+              class="font-mono text-right" id="e-thr">—</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Caché</span><span class="font-mono text-right"
+              id="e-cache">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts & Connectivity -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Conexión EAM -->
+      <div
+        class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm flex flex-col">
+        <div class="p-5 border-b border-borderLight dark:border-borderDark flex justify-between items-center">
+          <h2 class="text-sm font-semibold uppercase tracking-wider flex items-center gap-2"><svg
+              class="w-5 h-5 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="16" y="16" width="6" height="6" rx="1"></rect>
+              <rect x="2" y="16" width="6" height="6" rx="1"></rect>
+              <rect x="9" y="2" width="6" height="6" rx="1"></rect>
+              <path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"></path>
+              <path d="M12 12V8"></path>
+            </svg> Conexión EAM</h2>
+          <span
+            class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+            id="eam-tag">—</span>
+        </div>
+        <div class="p-5 flex-1 flex flex-col">
+          <div class="flex justify-between text-sm py-2 border-b border-borderLight dark:border-borderDark"><span
+              class="text-slate-500">Destino</span><span class="font-mono" id="eam-target">—</span></div>
+          <div class="flex justify-between text-sm py-2"><span class="text-slate-500">Proxy en uso</span><span
+              class="font-mono" id="eam-proxy">—</span></div>
+
+          <div class="mt-auto pt-6">
+            <button id="btn-ping-auth"
+              class="w-full bg-brand hover:bg-orange-500 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+              Validar Organización (Ping Auth)
+            </button>
+
+            <!-- Resultado Auth -->
+            <div id="auth-result" class="hidden mt-4 p-4 rounded-lg text-sm border font-mono">
+              <div class="flex justify-between mb-1"><span class="opacity-75">Red (HTTP GET):</span><span
+                  id="auth-net-ms"></span></div>
+              <div class="flex justify-between mb-1"><span class="opacity-75">Auth (SOAP WSSecurity):</span><span
+                  id="auth-soap-ms"></span></div>
+              <div class="flex justify-between font-bold pt-2 border-t border-current/20 mt-2"><span
+                  class="opacity-75">Organización:</span><span id="auth-org-name" class="text-brand"></span></div>
+            </div>
+            <!-- Error Auth -->
+            <div id="auth-error-box"
+              class="hidden mt-4 p-4 rounded-lg text-xs font-mono bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:border-red-500/30 dark:text-red-400 whitespace-pre-wrap break-words">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tráfico Chart -->
+      <div
+        class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm lg:col-span-1 p-5">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Tráfico en Vivo</h2>
+        <div id="chart-traffic" class="w-full"></div>
+      </div>
+
+      <!-- Memoria Chart -->
+      <div
+        class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm lg:col-span-1 p-5 relative">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Uso de Memoria</h2>
+        <div id="chart-mem" class="w-full flex justify-center"></div>
+        <div class="absolute bottom-6 left-0 right-0 text-center text-xs text-slate-400 font-mono" id="k-mem-sub"></div>
+      </div>
+
+    </div>
+
+    <!-- Caché SQLite -->
+    <div class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm">
+      <div class="p-5 border-b border-borderLight dark:border-borderDark flex justify-between items-center gap-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wider flex items-center gap-2"><svg
+            class="w-5 h-5 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+          </svg> Caché SQLite</h2>
+        <div class="flex items-center gap-3">
+          <span
+            class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+            id="sq-tag">—</span>
+          <button id="sq-refresh"
+            class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-borderLight dark:border-borderDark rounded-lg px-4 py-1.5 text-sm font-medium transition-colors">Revisar</button>
+        </div>
+      </div>
+      <div class="p-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 text-sm">
+          <div class="flex justify-between gap-2 py-2 border-b border-borderLight dark:border-borderDark"><span
+              class="text-slate-500 shrink-0">Archivo</span><span class="font-mono text-right truncate" id="sq-path"
+              title="">—</span></div>
+          <div class="flex justify-between gap-2 py-2 border-b border-borderLight dark:border-borderDark"><span
+              class="text-slate-500 shrink-0">Tamaño</span><span class="font-mono text-right" id="sq-size">—</span>
+          </div>
+          <div class="flex justify-between gap-2 py-2 border-b border-borderLight dark:border-borderDark"><span
+              class="text-slate-500 shrink-0">Última escritura</span><span class="font-mono text-right"
+              id="sq-write">—</span></div>
+          <div class="flex justify-between gap-2 py-2 border-b border-borderLight dark:border-borderDark"><span
+              class="text-slate-500 shrink-0">Integridad</span><span class="font-mono text-right" id="sq-int">—</span>
+          </div>
+          <div class="flex justify-between gap-2 py-2"><span class="text-slate-500 shrink-0">¿Abre?</span><span
+              class="font-mono text-right" id="sq-open">—</span></div>
+          <div class="flex justify-between gap-2 py-2"><span class="text-slate-500 shrink-0">¿Escribible?</span><span
+              class="font-mono text-right" id="sq-writable">—</span></div>
+          <div class="flex justify-between gap-2 py-2"><span class="text-slate-500 shrink-0">Journal</span><span
+              class="font-mono text-right" id="sq-journal">—</span></div>
+          <div class="flex justify-between gap-2 py-2"><span class="text-slate-500 shrink-0">Espera ante
+              lock</span><span class="font-mono text-right" id="sq-timeout">—</span></div>
+        </div>
+        <div id="sq-tables" class="flex flex-wrap gap-2 mt-4"></div>
+        <div id="sq-error"
+          class="hidden mt-4 p-4 rounded-lg text-xs font-mono bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:border-red-500/30 dark:text-red-400 whitespace-pre-wrap break-words">
+        </div>
+      </div>
+    </div>
+
+    <!-- Logs Table -->
+    <div
+      class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-[500px]">
+
+      <div
+        class="bg-slate-50 dark:bg-[#132235] border-b border-borderLight dark:border-borderDark p-4 flex flex-wrap gap-4 justify-between items-center">
+        <div class="flex items-center gap-2">
+          <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500">Historial de Eventos</h2>
+          <span class="px-2 py-0.5 rounded text-xs bg-brand/10 text-brand font-medium">Filtrado al usuario activo</span>
+        </div>
+        <div class="flex flex-wrap gap-3 items-center">
+          <div
+            class="inline-flex rounded-lg border border-borderLight dark:border-borderDark overflow-hidden bg-cardLight dark:bg-cardDark text-sm">
+            <button
+              class="px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-300"
+              id="btn-src-file">Archivo local</button>
+            <div class="w-px bg-borderLight dark:bg-borderDark"></div>
+            <button
+              class="px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-300"
+              id="btn-src-db">Base de datos</button>
+          </div>
+          <select id="f-level"
+            class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand">
+            <option value="">Todos los niveles</option>
+            <option value="ERR">Errores</option>
+            <option value="WRN">Advertencias</option>
+            <option value="INF">Información</option>
+          </select>
+          <select id="f-take"
+            class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand w-20">
+            <option value="100">100</option>
+            <option value="200" selected>200</option>
+            <option value="500">500</option>
+          </select>
+          <input type="search" id="f-search" placeholder="Filtrar en el mensaje…"
+            class="bg-cardLight dark:bg-cardDark border border-borderLight dark:border-borderDark rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand w-64 placeholder-slate-400">
+          <button id="f-refresh"
+            class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-borderLight dark:border-borderDark rounded-lg px-4 py-1.5 text-sm font-medium transition-colors">
+            Refrescar
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-auto flex-1 relative">
+        <table class="w-full text-left border-collapse">
+          <thead
+            class="bg-cardLight dark:bg-[#0E1A29] sticky top-0 z-10 shadow-[0_1px_0_var(--tw-border-opacity)] border-borderLight dark:border-borderDark">
+            <tr>
+              <th
+                class="py-3 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider border-b border-borderLight dark:border-borderDark whitespace-nowrap">
+                Fecha / Hora</th>
+              <th
+                class="py-3 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider border-b border-borderLight dark:border-borderDark w-24">
+                Nivel</th>
+              <th
+                class="py-3 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider border-b border-borderLight dark:border-borderDark w-48">
+                Origen</th>
+              <th
+                class="py-3 px-4 font-semibold text-xs text-slate-500 uppercase tracking-wider border-b border-borderLight dark:border-borderDark">
+                Mensaje</th>
+            </tr>
+          </thead>
+          <tbody id="log-list" class="divide-y divide-borderLight dark:divide-borderDark text-sm">
+            <tr>
+              <td colspan="4" class="py-8 text-center text-slate-500">Cargando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // ==================== THEME & UTILS ====================
+    const html = document.documentElement;
+    const themeBtn = document.getElementById('theme-btn');
+    const themeIcon = document.getElementById('theme-icon');
+    const storedTheme = localStorage.getItem('hgt-theme');
+
+    if (storedTheme === 'light') html.classList.remove('dark');
+    else if (storedTheme === 'dark') html.classList.add('dark');
+    else html.classList.add('dark'); // default orquestador
+
+    function updateThemeBtn() {
+      const isDark = html.classList.contains('dark');
+      themeIcon.innerHTML = isDark
+        ? '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>'
+        : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>';
+      if (trafficChart && memoryChart) {
+        const mode = isDark ? 'dark' : 'light';
+        const trackColor = isDark ? '#1E314A' : '#e2e8f0';
+        const textColor = isDark ? '#e2e8f0' : '#0f172a';
+        trafficChart.updateOptions({ theme: { mode } });
+        memoryChart.updateOptions({
+          theme: { mode },
+          plotOptions: { radialBar: { track: { background: trackColor }, dataLabels: { value: { color: textColor } } } }
+        });
+      }
     }
 
-    tag.textContent = d.ok ? 'Saludable' : 'Con problemas';
-    tag.className = d.ok ? sqPill.ok : sqPill.bad;
+    themeBtn.onclick = () => {
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        localStorage.setItem('hgt-theme', 'light');
+      } else {
+        html.classList.add('dark');
+        localStorage.setItem('hgt-theme', 'dark');
+      }
+      updateThemeBtn();
+    };
 
-    $('#sq-path').textContent = d.path || '—';
-    $('#sq-path').title = d.path || '';
-    $('#sq-size').textContent = d.exists ? nf(d.sizeMB) + ' MB' : '—';
-    $('#sq-write').textContent = d.lastWriteUtc ? new Date(d.lastWriteUtc).toLocaleString('es-CL') : '—';
+    const $ = s => document.querySelector(s);
+    const esc = s => (s == null ? '' : String(s)).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    const nf = n => (n == null ? '—' : Number(n).toLocaleString('es-CL'));
 
-    const integrity = d.exists ? (d.integrity || '—') : 'No existe';
-    $('#sq-int').textContent = integrity;
-    $('#sq-int').className = 'font-mono text-right ' + (integrity==='ok' ? 'text-emerald-500' : 'text-red-500');
+    // ==================== APEXCHARTS ====================
+    let trafficChart, memoryChart;
+    const hist = { req: Array(20).fill(0), lat: Array(20).fill(0), times: Array(20).fill('') };
 
-    $('#sq-open').textContent = yn(d.canOpen);
-    $('#sq-open').className = 'font-mono text-right ' + (d.canOpen ? '' : 'text-red-500');
+    function initCharts() {
+      const isDark = html.classList.contains('dark');
+      const textColor = isDark ? '#94a3b8' : '#64748b';
 
-    // La carpeta importa tanto como el archivo: SQLite escribe ahí el journal/-wal.
-    const writable = d.writable && d.directoryWritable;
-    $('#sq-writable').textContent = d.writable===d.directoryWritable
-      ? yn(writable)
-      : (d.writable ? 'Solo el archivo' : 'Solo la carpeta');
-    $('#sq-writable').className = 'font-mono text-right ' + (writable ? '' : 'text-red-500');
+      trafficChart = new ApexCharts($("#chart-traffic"), {
+        chart: { type: 'area', height: 220, animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 1000 } }, toolbar: { show: false }, background: 'transparent' },
+        stroke: { curve: 'smooth', width: 2 },
+        colors: ['#ea580c', '#3b82f6'],
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0, stops: [0, 90, 100] } },
+        dataLabels: { enabled: false },
+        series: [
+          { name: 'Req/min', data: hist.req },
+          { name: 'Latencia (ms)', data: hist.lat }
+        ],
+        xaxis: { categories: hist.times, labels: { style: { colors: textColor } }, axisBorder: { show: false }, axisTicks: { show: false } },
+        yaxis: [
+          { min: 0, labels: { style: { colors: textColor } }, title: { text: 'Req/min', style: { color: textColor, fontWeight: 500 } } },
+          { min: 0, opposite: true, labels: { style: { colors: textColor } }, title: { text: 'Latencia (ms)', style: { color: textColor, fontWeight: 500 } } }
+        ],
+        theme: { mode: isDark ? 'dark' : 'light' },
+        legend: { show: false }
+      });
+      trafficChart.render();
 
-    $('#sq-journal').textContent = d.journalMode || '—';
-    $('#sq-timeout').textContent = d.busyTimeoutSeconds!=null ? d.busyTimeoutSeconds + ' s' : '—';
-
-    $('#sq-tables').innerHTML = (d.tables||[]).map(t =>
-      `<span class="px-2 py-1 rounded text-xs font-mono bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">${esc(t.name)}: <b class="text-brand">${nf(t.rows)}</b></span>`
-    ).join('');
-
-    if(d.error){
-      errBox.classList.remove('hidden');
-      errBox.textContent = (d.stage ? `Falló en: ${d.stage}\n` : '') + d.error;
+      memoryChart = new ApexCharts($("#chart-mem"), {
+        chart: { type: 'radialBar', height: 260, background: 'transparent' },
+        colors: ['#ea580c'],
+        series: [0],
+        plotOptions: {
+          radialBar: {
+            hollow: { size: '65%' },
+            track: { background: isDark ? '#1E314A' : '#e2e8f0' },
+            dataLabels: {
+              name: { show: true, color: textColor, fontSize: '12px', offsetY: -10 },
+              value: { show: true, fontSize: '24px', fontWeight: 600, color: isDark ? '#e2e8f0' : '#0f172a', formatter: function (val) { return (window._lastMemMB || 0) + " MB" } }
+            }
+          }
+        },
+        labels: ['RAM del Proceso'],
+        theme: { mode: isDark ? 'dark' : 'light' }
+      });
+      memoryChart.render();
     }
-  }catch(e){
-    tag.textContent = 'Sin respuesta'; tag.className = sqPill.warn;
-    errBox.classList.remove('hidden');
-    errBox.textContent = 'No se pudo consultar /diagnostics/sqlite.';
-  }
-}
 
-// ==================== LOGS LOGIC ====================
-let logState = { source:'file', level:'', take:'200', search:'', entries:[] };
-
-function renderLogs() {
-  const tbody = $('#log-list');
-  const q = logState.search.toLowerCase();
-  const f = logState.entries.filter(e => {
-    if(q && !e.message.toLowerCase().includes(q) && (!e.detail || !e.detail.toLowerCase().includes(q)) && !e.source.toLowerCase().includes(q)) return false;
-    return true;
-  });
-
-  if(f.length===0){
-    tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">No hay entradas que coincidan con los filtros.</td></tr>`;
-    return;
-  }
-
-  let html = '';
-  for(let e of f){
-    let c = '';
-    let badge = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
-    if(e.level==='ERR' || e.level==='FTL'){
-      c = 'bg-red-50 dark:bg-red-900/10';
-      badge = 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400';
-    }else if(e.level==='WRN'){
-      c = 'bg-amber-50 dark:bg-amber-900/10';
-      badge = 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400';
+    // ==================== DATA FETCHING ====================
+    async function api(path, { timeout } = {}) {
+      const ctrl = timeout ? new AbortController() : null;
+      const t = timeout ? setTimeout(() => ctrl.abort(), timeout) : null;
+      try { const r = await fetch(path, { headers: { Accept: 'application/json' }, signal: ctrl?.signal }); return await r.json(); }
+      finally { if (t) clearTimeout(t); }
     }
-    
-    let det = e.detail ? `<div class="mt-2 text-xs text-slate-500 font-mono whitespace-pre-wrap">${esc(e.detail)}</div>` : '';
-    
-    html += `<tr class="${c} hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+
+    async function loadPerf() {
+      try {
+        const d = await api('/diagnostics/perf');
+        $('#envname').textContent = d.app.environment === 'Development' ? 'QAS' : 'Producción';
+        console.log(d.app.environment);
+        const prd = /prod/i.test(d.app.environment);
+        $('#envdot').className = prd ? 'w-2 h-2 rounded-full bg-red-500' : 'w-2 h-2 rounded-full bg-emerald-500';
+        $('#envpill').className = `flex items-center gap-2 px-3 py-1 rounded-full border text-sm font-medium ${prd ? 'border-red-500/30 bg-red-50 dark:bg-red-900/20 text-red-600' : 'border-borderLight dark:border-borderDark bg-slate-50 dark:bg-slate-800/50'}`;
+
+        $('#k-up').textContent = d.app.uptime;
+        $('#k-up-sub').textContent = 'desde ' + new Date(d.app.startedUtc).toLocaleString('es-CL');
+        $('#k-err').textContent = nf(d.traffic.totalErrors);
+        if (d.traffic.totalErrors > 0) $('#k-err').className = 'text-2xl font-bold text-red-500';
+
+        $('#e-host').textContent = d.app.machine;
+        $('#e-net').textContent = '.NET ' + d.app.dotnet;
+        $('#e-thr').textContent = d.process.threads + ' hilos';
+        $('#e-cache').textContent = (d.cache.enabled ? 'activo' : 'inact');
+
+        // Update Charts
+        if (trafficChart && memoryChart) {
+          const now = new Date();
+          hist.times.push(now.getSeconds() + 's');
+
+          let reqMin = 0;
+          let lat = 0;
+
+          const ct = d.app.currentTenant;
+          const tData = (d.traffic.tenants && d.traffic.tenants[ct]) || { totalRequests: 0, totalElapsedMs: 0 };
+
+          if (window._prevReq != null) {
+            const deltaReq = tData.totalRequests - window._prevReq;
+            const deltaMs = (tData.totalElapsedMs || 0) - (window._prevMs || 0);
+            reqMin = deltaReq * 12; // (peticiones en 5s) * 12 = req/min
+            lat = deltaReq > 0 ? Math.round(deltaMs / deltaReq) : 0;
+          }
+          window._prevReq = tData.totalRequests;
+          window._prevMs = tData.totalElapsedMs;
+
+          hist.req.push(reqMin);
+          hist.lat.push(lat);
+
+          hist.times.shift();
+          hist.req.shift();
+          hist.lat.shift();
+
+          trafficChart.updateSeries([
+            { name: 'Req/min (' + ct + ')', data: hist.req },
+            { name: 'Latencia ms (' + ct + ')', data: hist.lat }
+          ]);
+          trafficChart.updateOptions({ xaxis: { categories: hist.times } });
+
+          window._lastMemMB = d.process.workingSetMB;
+          const memPct = Math.min(100, Math.round((d.process.workingSetMB / 2000) * 100)); // Escala base 2GB (visual)
+          memoryChart.updateSeries([memPct]);
+          $('#k-mem-sub').textContent = `${d.process.workingSetMB} MB (Heap: ${d.process.gcHeapMB} MB)`;
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadEam() {
+      const tag = $('#eam-tag');
+      tag.textContent = '...'; tag.className = 'px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400';
+      try {
+        const d = await api('/diagnostics/eam', { timeout: 20000 });
+        const ok = d.ok === true;
+        tag.textContent = ok ? 'En Línea' : 'Caído';
+        tag.className = `px-3 py-1 rounded-full text-xs font-bold ${ok ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`;
+
+        $('#eam-target').textContent = d.url || '—';
+        $('#eam-proxy').textContent = d.proxy || 'Ninguno';
+      } catch (e) {
+        tag.textContent = 'Timeout';
+        tag.className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400';
+      }
+    }
+
+    // ==================== CACHÉ SQLITE ====================
+    const pill = 'px-3 py-1 rounded-full text-xs font-bold ';
+    const sqPill = {
+      neutral: pill + 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
+      ok: pill + 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
+      bad: pill + 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400',
+      warn: pill + 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+    };
+    const yn = v => v === true ? 'Sí' : (v === false ? 'No' : '—');
+
+    async function loadSqlite() {
+      const tag = $('#sq-tag');
+      const errBox = $('#sq-error');
+      tag.textContent = 'Revisando...'; tag.className = sqPill.neutral;
+      errBox.classList.add('hidden');
+      try {
+        // quick_check recorre el archivo: se le da aire suficiente en cachés grandes.
+        const d = await api('/diagnostics/sqlite', { timeout: 30000 });
+
+        if (d.fileBased === false) {
+          tag.textContent = 'En memoria'; tag.className = sqPill.neutral;
+          $('#sq-path').textContent = d.dataSource || '—';
+          return;
+        }
+
+        tag.textContent = d.ok ? 'Saludable' : 'Con problemas';
+        tag.className = d.ok ? sqPill.ok : sqPill.bad;
+
+        $('#sq-path').textContent = d.path || '—';
+        $('#sq-path').title = d.path || '';
+        $('#sq-size').textContent = d.exists ? nf(d.sizeMB) + ' MB' : '—';
+        $('#sq-write').textContent = d.lastWriteUtc ? new Date(d.lastWriteUtc).toLocaleString('es-CL') : '—';
+
+        const integrity = d.exists ? (d.integrity || '—') : 'No existe';
+        $('#sq-int').textContent = integrity;
+        $('#sq-int').className = 'font-mono text-right ' + (integrity === 'ok' ? 'text-emerald-500' : 'text-red-500');
+
+        $('#sq-open').textContent = yn(d.canOpen);
+        $('#sq-open').className = 'font-mono text-right ' + (d.canOpen ? '' : 'text-red-500');
+
+        // La carpeta importa tanto como el archivo: SQLite escribe ahí el journal/-wal.
+        const writable = d.writable && d.directoryWritable;
+        $('#sq-writable').textContent = d.writable === d.directoryWritable
+          ? yn(writable)
+          : (d.writable ? 'Solo el archivo' : 'Solo la carpeta');
+        $('#sq-writable').className = 'font-mono text-right ' + (writable ? '' : 'text-red-500');
+
+        $('#sq-journal').textContent = d.journalMode || '—';
+        $('#sq-timeout').textContent = d.busyTimeoutSeconds != null ? d.busyTimeoutSeconds + ' s' : '—';
+
+        $('#sq-tables').innerHTML = (d.tables || []).map(t =>
+          `<span class="px-2 py-1 rounded text-xs font-mono bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">${esc(t.name)}: <b class="text-brand">${nf(t.rows)}</b></span>`
+        ).join('');
+
+        if (d.error) {
+          errBox.classList.remove('hidden');
+          errBox.textContent = (d.stage ? `Falló en: ${d.stage}\n` : '') + d.error;
+        }
+      } catch (e) {
+        tag.textContent = 'Sin respuesta'; tag.className = sqPill.warn;
+        errBox.classList.remove('hidden');
+        errBox.textContent = 'No se pudo consultar /diagnostics/sqlite.';
+      }
+    }
+
+    // ==================== LOGS LOGIC ====================
+    let logState = { source: 'file', level: '', take: '200', search: '', entries: [] };
+
+    function renderLogs() {
+      const tbody = $('#log-list');
+      const q = logState.search.toLowerCase();
+      const f = logState.entries.filter(e => {
+        if (q && !e.message.toLowerCase().includes(q) && (!e.detail || !e.detail.toLowerCase().includes(q)) && !e.source.toLowerCase().includes(q)) return false;
+        return true;
+      });
+
+      if (f.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">No hay entradas que coincidan con los filtros.</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      for (let e of f) {
+        let c = '';
+        let badge = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+        if (e.level === 'ERR' || e.level === 'FTL') {
+          c = 'bg-red-50 dark:bg-red-900/10';
+          badge = 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400';
+        } else if (e.level === 'WRN') {
+          c = 'bg-amber-50 dark:bg-amber-900/10';
+          badge = 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400';
+        }
+
+        let det = e.detail ? `<div class="mt-2 text-xs text-slate-500 font-mono whitespace-pre-wrap">${esc(e.detail)}</div>` : '';
+
+        html += `<tr class="${c} hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
       <td class="py-3 px-4 whitespace-nowrap text-slate-500 border-t border-borderLight dark:border-borderDark">${esc(e.ts)}</td>
       <td class="py-3 px-4 whitespace-nowrap border-t border-borderLight dark:border-borderDark"><span class="px-2 py-1 rounded text-xs font-medium ${badge}">${esc(e.level)}</span></td>
       <td class="py-3 px-4 whitespace-nowrap text-brand font-medium border-t border-borderLight dark:border-borderDark">${esc(e.source)}</td>
@@ -486,82 +607,90 @@ function renderLogs() {
          ${det}
       </td>
     </tr>`;
-  }
-  tbody.innerHTML = html;
-}
-
-async function loadLogs() {
-  $('#log-list').innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">Cargando...</td></tr>`;
-  try{
-    const d = await api(`/diagnostics/logs?source=${logState.source}&level=${logState.level}&take=${logState.take}`);
-    logState.entries = d.entries || [];
-    renderLogs();
-  }catch(e){
-    $('#log-list').innerHTML = `<tr><td colspan="4" class="py-8 text-center text-red-500">Error al cargar logs.</td></tr>`;
-  }
-}
-
-// ==================== BINDINGS & INIT ====================
-$('#btn-src-file').onclick = (e) => { 
-  logState.source='file'; 
-  e.target.className = 'px-4 py-1.5 bg-slate-200 dark:bg-slate-700 font-medium text-slate-800 dark:text-white transition-colors';
-  $('#btn-src-db').className = 'px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-300';
-  loadLogs(); 
-};
-$('#btn-src-db').onclick = (e) => { 
-  logState.source='db'; 
-  e.target.className = 'px-4 py-1.5 bg-slate-200 dark:bg-slate-700 font-medium text-slate-800 dark:text-white transition-colors';
-  $('#btn-src-file').className = 'px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-300';
-  loadLogs(); 
-};
-$('#btn-src-file').click();
-
-$('#f-level').onchange = e => { logState.level = e.target.value; loadLogs(); };
-$('#f-take').onchange = e => { logState.take = e.target.value; loadLogs(); };
-$('#f-search').oninput = e => { logState.search = e.target.value; renderLogs(); };
-$('#f-refresh').onclick = loadLogs;
-
-setInterval(()=>{ const d=new Date(); $('#clock').textContent = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0'); },1000);
-
-$('#btn-ping-auth').onclick = async () => {
-  const btn = $('#btn-ping-auth');
-  const resBox = $('#auth-result');
-  const errBox = $('#auth-error-box');
-  
-  btn.disabled = true;
-  btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Validando...`;
-  resBox.classList.add('hidden');
-  errBox.classList.add('hidden');
-  
-  try {
-    const d = await api('/diagnostics/eam-auth');
-    resBox.classList.remove('hidden');
-    resBox.className = `mt-4 p-4 rounded-lg text-sm border font-mono ${d.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-500/30 dark:text-emerald-400' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-500/30 dark:text-red-400'}`;
-    
-    $('#auth-net-ms').textContent = d.network.ok ? `${d.network.elapsedMs} ms` : 'Fallo';
-    $('#auth-soap-ms').textContent = d.auth.ok ? `${d.auth.elapsedMs} ms` : 'Fallo';
-    $('#auth-org-name').textContent = d.organization || 'No def.';
-    
-    if(!d.ok) {
-      errBox.classList.remove('hidden');
-      errBox.textContent = (d.network.error || '') + '\n' + (d.auth.error || '');
+      }
+      tbody.innerHTML = html;
     }
-  } catch(e) {
-    errBox.classList.remove('hidden');
-    errBox.textContent = 'Error de conexión con el controlador.';
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = `Validar Organización (Ping Auth)`;
-  }
-};
 
-$('#sq-refresh').onclick = loadSqlite;
+    async function loadLogs() {
+      $('#log-list').innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">Cargando...</td></tr>`;
+      try {
+        const d = await api(`/diagnostics/logs?source=${logState.source}&level=${logState.level}&take=${logState.take}`);
+        logState.entries = d.entries || [];
+        renderLogs();
+      } catch (e) {
+        $('#log-list').innerHTML = `<tr><td colspan="4" class="py-8 text-center text-red-500">Error al cargar logs.</td></tr>`;
+      }
+    }
 
-updateThemeBtn();
-initCharts();
-loadPerf(); loadEam(); loadSqlite();
-// loadSqlite queda fuera del refresco automático: quick_check recorre el archivo completo.
-setInterval(loadPerf, 5000);
-</script>
+    // ==================== BINDINGS & INIT ====================
+    $('#btn-src-file').onclick = (e) => {
+      logState.source = 'file';
+      e.target.className = 'px-4 py-1.5 bg-slate-200 dark:bg-slate-700 font-medium text-slate-800 dark:text-white transition-colors';
+      $('#btn-src-db').className = 'px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-300';
+      loadLogs();
+    };
+    $('#btn-src-db').onclick = (e) => {
+      logState.source = 'db';
+      e.target.className = 'px-4 py-1.5 bg-slate-200 dark:bg-slate-700 font-medium text-slate-800 dark:text-white transition-colors';
+      $('#btn-src-file').className = 'px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-300';
+      loadLogs();
+    };
+    $('#btn-src-file').click();
+
+    $('#f-level').onchange = e => { logState.level = e.target.value; loadLogs(); };
+    $('#f-take').onchange = e => { logState.take = e.target.value; loadLogs(); };
+    $('#f-search').oninput = e => { logState.search = e.target.value; renderLogs(); };
+    $('#f-refresh').onclick = loadLogs;
+
+    setInterval(() => { const d = new Date(); $('#clock').textContent = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0') + ':' + d.getSeconds().toString().padStart(2, '0'); }, 1000);
+
+    $('#btn-ping-auth').onclick = async () => {
+      const btn = $('#btn-ping-auth');
+      const resBox = $('#auth-result');
+      const errBox = $('#auth-error-box');
+
+      btn.disabled = true;
+      btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Validando...`;
+      resBox.classList.add('hidden');
+      errBox.classList.add('hidden');
+
+      try {
+        const d = await api('/diagnostics/eam-auth');
+        resBox.classList.remove('hidden');
+        resBox.className = `mt-4 p-4 rounded-lg text-sm border font-mono ${d.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-500/30 dark:text-emerald-400' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-500/30 dark:text-red-400'}`;
+
+        $('#auth-net-ms').textContent = d.network.ok ? `${d.network.elapsedMs} ms` : 'Fallo';
+        $('#auth-soap-ms').textContent = d.auth.ok ? `${d.auth.elapsedMs} ms` : 'Fallo';
+        $('#auth-org-name').textContent = d.organization || 'No def.';
+
+        if (!d.ok) {
+          errBox.classList.remove('hidden');
+          errBox.textContent = (d.network.error || '') + '\n' + (d.auth.error || '');
+        }
+      } catch (e) {
+        errBox.classList.remove('hidden');
+        errBox.textContent = 'Error de conexión con el controlador.';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `Validar Organización (Ping Auth)`;
+      }
+    };
+
+    $('#sq-refresh').onclick = loadSqlite;
+
+    updateThemeBtn();
+    initCharts();
+    loadPerf(); loadEam(); loadSqlite();
+    // loadSqlite queda fuera del refresco automático: quick_check recorre el archivo completo.
+    setInterval(loadPerf, 5000);
+    function logout() {
+      if (confirm("¿Estás seguro de querer cerrar sesión para cambiar de tenant?")) {
+        // En Basic Auth, hacer una petición con usuario/clave inválidos sobrescribe el caché de credenciales
+        const url = window.location.protocol + "//logout:logout@" + window.location.host + window.location.pathname;
+        window.location.href = url;
+      }
+    }
+  </script>
 </body>
+
 </html>

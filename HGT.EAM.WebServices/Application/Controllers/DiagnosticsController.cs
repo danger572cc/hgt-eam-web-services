@@ -5,6 +5,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace HGT.EAM.WebServices.Application.Controllers;
@@ -243,7 +244,8 @@ public class DiagnosticsController : ControllerBase
                 machine = Environment.MachineName,
                 dotnet = Environment.Version.ToString(),
                 startedUtc = _metrics.StartedUtc,
-                uptime = _metrics.Uptime.ToString(@"dd\.hh\:mm\:ss")
+                uptime = _metrics.Uptime.ToString(@"dd\.hh\:mm\:ss"),
+                currentTenant = User.FindFirst("Organization")?.Value ?? "Anonymous"
             },
             process = new
             {
@@ -259,10 +261,19 @@ public class DiagnosticsController : ControllerBase
             {
                 totalRequests = _metrics.TotalRequests,
                 totalErrors = _metrics.TotalErrors,
+                totalElapsedMs = _metrics.TotalElapsedMs,
                 averageMs = Math.Round(_metrics.AverageMs, 1),
                 requestsPerMin = _metrics.Uptime.TotalMinutes < 0.1
                     ? 0
-                    : Math.Round(_metrics.TotalRequests / _metrics.Uptime.TotalMinutes, 1)
+                    : Math.Round(_metrics.TotalRequests / _metrics.Uptime.TotalMinutes, 1),
+                tenants = _metrics.Tenants.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => new
+                    {
+                        totalRequests = kvp.Value.TotalRequests,
+                        totalErrors = kvp.Value.TotalErrors,
+                        totalElapsedMs = kvp.Value.TotalElapsedMs
+                    })
             },
             cache = new
             {

@@ -31,7 +31,8 @@ public class DiagnosticsMetricsMiddleware(RequestDelegate next, DiagnosticsMetri
         finally
         {
             stopwatch.Stop();
-            _metrics.Record(stopwatch.ElapsedMilliseconds, context.Response.StatusCode >= 500);
+            var org = context.User?.FindFirst("Organization")?.Value ?? "Anonymous";
+            _metrics.Record(org, stopwatch.ElapsedMilliseconds, context.Response.StatusCode >= 500);
         }
     }
 }
