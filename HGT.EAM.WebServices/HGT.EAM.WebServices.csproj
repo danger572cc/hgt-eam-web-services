@@ -5,6 +5,12 @@
     <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
+  <!-- ══════════════════════════════════════════════════════════════════
+       PUBLICACIÓN BLINDADA: aplica SOLO al hacer dotnet publish.
+       ═══════════════════════════════════════════════════════════════ -->
+
+
+
   <ItemGroup>
     <PackageReference Include="AspNetCore.Authentication.Basic" Version="9.0.0" />
 
@@ -14,6 +20,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+
   </ItemGroup>
 
   <ItemGroup>
@@ -34,5 +41,103 @@
   <ItemGroup>
     <Folder Include="logs\" />
   </ItemGroup>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TARGETS POST-PUBLISH: poda de runtimes + exclusión de appsettings
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- 1. Determinar el directorio final de publicación -->
+  <Target Name="SetFinalPublishDir" AfterTargets="Publish;PipelineCopyAllFilesToOneFolderForMsdeploy">
+    <PropertyGroup>
+      <!-- a) Si es FileSystem y PublishUrl existe -->
+      <FinalPublishDir Condition="'$(PublishUrl)' != '' and !HasTrailingSlash('$(PublishUrl)')">$(PublishUrl)\</FinalPublishDir>
+      <FinalPublishDir Condition="'$(PublishUrl)' != '' and HasTrailingSlash('$(PublishUrl)')">$(PublishUrl)</FinalPublishDir>
+      
+      <!-- b) Si es WebDeploy a IIS, enganchar en la carpeta temporal de WPP antes del empaquetado/envío -->
+      <FinalPublishDir Condition="'$(WebPublishMethod)' == 'MSDeploy' and '$(WPPAllFilesInSingleFolder)' != ''">$(WPPAllFilesInSingleFolder)\</FinalPublishDir>
+      <FinalPublishDir Condition="'$(WebPublishMethod)' == 'MSDeploy' and '$(WPPAllFilesInSingleFolder)' == ''">$(PublishIntermediateTempPath)Out\</FinalPublishDir>
+
+      <!-- c) Fallback estándar al PublishDir -->
+      <FinalPublishDir Condition="'$(FinalPublishDir)' == ''">$(PublishDir)</FinalPublishDir>
+    </PropertyGroup>
+    
+    <!-- Normalizar dobles diagonales por precaución -->
+    <PropertyGroup>
+      <FinalPublishDir>$([System.String]::Copy('$(FinalPublishDir)').Replace('\\', '\'))</FinalPublishDir>
+    </PropertyGroup>
+
+    <Message Importance="high" Text="Directorio base para limpieza: $(FinalPublishDir)" />
+  </Target>
+
+  <!-- 2. Podar runtimes nativos que NO son win-x64 y eliminar PDB residuales -->
+  <Target Name="PrunePublishOutput" AfterTargets="SetFinalPublishDir">
+    <ItemGroup>
+      <!-- Runtimes nativos de plataformas no-Windows x64 -->
+      <_RuntimeToDelete Include="$(FinalPublishDir)runtimes\linux-*\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)runtimes\osx-*\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)runtimes\maccatalyst-*\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)runtimes\win-arm\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)runtimes\win-arm64\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)runtimes\win-x86\**" />
+      <!-- PDB residuales -->
+      <_RuntimeToDelete Include="$(FinalPublishDir)**\*.pdb" />
+      <!-- Archivos de recursos de idiomas innecesarios -->
+      <_RuntimeToDelete Include="$(FinalPublishDir)cs\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)de\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)fr\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)it\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)ja\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)ko\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)pl\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)pt-BR\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)ru\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)tr\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)zh-Hans\**" />
+      <_RuntimeToDelete Include="$(FinalPublishDir)zh-Hant\**" />
+    </ItemGroup>
+    <Delete Files="@(_RuntimeToDelete)" />
+    <!-- Eliminar carpetas vacías de runtimes podados -->
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\linux-arm" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\linux-arm64" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\linux-armel" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\linux-mips64" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\linux-musl-arm" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\linux-musl-arm64" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\linux-musl-s390x" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\linux-musl-x64" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\linux-ppc64le" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\linux-s390x" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\linux-x64" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\linux-x86" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\osx-arm64" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\osx-x64" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\maccatalyst-arm64" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\maccatalyst-x64" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\win-arm" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\win-arm64" ContinueOnError="true" />
+    <RemoveDir Directories="$(FinalPublishDir)runtimes\win-x86" ContinueOnError="true" />
+    <!-- Eliminar carpetas de idiomas adicionales que el SDK no poda automáticamente -->
+    <RemoveDir Directories="$(FinalPublishDir)cs;$(FinalPublishDir)de;$(FinalPublishDir)fr;$(FinalPublishDir)it;$(FinalPublishDir)ja;$(FinalPublishDir)ko;$(FinalPublishDir)pl;$(FinalPublishDir)pt-BR;$(FinalPublishDir)ru;$(FinalPublishDir)tr;$(FinalPublishDir)zh-Hans;$(FinalPublishDir)zh-Hant" ContinueOnError="true" />
+    <Message Importance="high" Text="✔ Poda de runtimes e idiomas completada en $(FinalPublishDir)" />
+  </Target>
+
+  <!-- 3. Excluir appsettings de otros ambientes según EnvironmentName del perfil -->
+  <Target Name="PruneAppSettings" AfterTargets="PrunePublishOutput">
+    <ItemGroup>
+      <!-- Si el ambiente es Development (QAS), eliminar los de Prod y Stage -->
+      <_SettingsToDelete Condition="'$(EnvironmentName)' == 'Development' or '$(EnvironmentName)' == ''"
+                         Include="$(FinalPublishDir)appsettings.Production.json;$(FinalPublishDir)appsettings.Stage.json" />
+      <!-- Si el ambiente es Production, eliminar los de Dev y Stage -->
+      <_SettingsToDelete Condition="'$(EnvironmentName)' == 'Production'"
+                         Include="$(FinalPublishDir)appsettings.Development.json;$(FinalPublishDir)appsettings.Stage.json" />
+      <!-- Si el ambiente es Stage, eliminar los de Dev y Prod -->
+      <_SettingsToDelete Condition="'$(EnvironmentName)' == 'Stage'"
+                         Include="$(FinalPublishDir)appsettings.Development.json;$(FinalPublishDir)appsettings.Production.json" />
+    </ItemGroup>
+    <Delete Files="@(_SettingsToDelete)" />
+    <Message Importance="high" Text="✔ Exclusión de appsettings completada (ambiente: $(EnvironmentName))" />
+  </Target>
+
+
 
 </Project>
