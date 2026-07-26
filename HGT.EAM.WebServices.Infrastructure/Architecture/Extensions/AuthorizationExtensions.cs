@@ -1,4 +1,4 @@
-﻿using AspNetCore.Authentication.Basic;
+using AspNetCore.Authentication.Basic;
 using HGT.EAM.WebServices.Infrastructure.Architecture.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -35,7 +35,7 @@ public static class AuthorizationExtensions
                 {
                     OnValidateCredentials = async context =>
                     {
-                        var userInfoEAM = allCredentials?.FirstOrDefault(f => f.Username == context.Username && f.Password == context.Password);
+                        var userInfoEAM = allCredentials?.FirstOrDefault(f => string.Equals(f.Username, context.Username, StringComparison.OrdinalIgnoreCase) && f.Password == context.Password);
 
                         if (userInfoEAM != null)
                         {
