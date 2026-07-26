@@ -122,22 +122,16 @@
     <Message Importance="high" Text="✔ Poda de runtimes e idiomas completada en $(FinalPublishDir)" />
   </Target>
 
-  <!-- 3. Excluir appsettings de otros ambientes según EnvironmentName del perfil -->
-  <Target Name="PruneAppSettings" AfterTargets="PrunePublishOutput">
-    <ItemGroup>
-      <!-- Si el ambiente es Development (QAS), eliminar los de Prod y Stage -->
-      <_SettingsToDelete Condition="'$(EnvironmentName)' == 'Development' or '$(EnvironmentName)' == ''"
-                         Include="$(FinalPublishDir)appsettings.Production.json;$(FinalPublishDir)appsettings.Stage.json" />
-      <!-- Si el ambiente es Production, eliminar los de Dev y Stage -->
-      <_SettingsToDelete Condition="'$(EnvironmentName)' == 'Production'"
-                         Include="$(FinalPublishDir)appsettings.Development.json;$(FinalPublishDir)appsettings.Stage.json" />
-      <!-- Si el ambiente es Stage, eliminar los de Dev y Prod -->
-      <_SettingsToDelete Condition="'$(EnvironmentName)' == 'Stage'"
-                         Include="$(FinalPublishDir)appsettings.Development.json;$(FinalPublishDir)appsettings.Production.json" />
-    </ItemGroup>
-    <Delete Files="@(_SettingsToDelete)" />
-    <Message Importance="high" Text="✔ Exclusión de appsettings completada (ambiente: $(EnvironmentName))" />
-  </Target>
+  <!-- 3. Excluir appsettings de otros ambientes según EnvironmentName del perfil usando exclusión nativa de Content -->
+  <ItemGroup>
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+    <Content Update="appsettings.Production.json" CopyToPublishDirectory="Never" />
+    <Content Update="appsettings.Stage.json" CopyToPublishDirectory="Never" />
+
+    <Content Update="appsettings.Development.json" Condition="'$(EnvironmentName)' == 'Development' or '$(EnvironmentName)' == ''" CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="appsettings.Production.json" Condition="'$(EnvironmentName)' == 'Production'" CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="appsettings.Stage.json" Condition="'$(EnvironmentName)' == 'Stage'" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 
 
 
