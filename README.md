@@ -58,13 +58,17 @@ El proyecto sigue los principios de **Clean Architecture** y utiliza los siguien
 
 ## 🚀 Inicio Rápido
 
+> **Nota:** esta sección cubre únicamente la **ejecución en desarrollo**.
+> Para instalar el servicio en un servidor (IIS), ver la [Guía de instalación](#-documentación).
+
 ### Requisitos
 
 - .NET 9.0 SDK o superior
-- SQL Server (para conexión a base de datos de negocio)
 - Credenciales de acceso a INFOR EAM Web Services
+- SQL Server accesible **para el registro de eventos** (sink de Serilog). Los datos de negocio
+  **no** provienen de SQL Server: se obtienen de los servicios SOAP de INFOR EAM.
 
-### Instalación
+### Ejecución en desarrollo
 
 1. **Clonar el repositorio**:
    ```bash
@@ -81,6 +85,9 @@ El proyecto sigue los principios de **Clean Architecture** y utiliza los siguien
    ```bash
    dotnet run --project HGT.EAM.WebServices/HGT.EAM.WebServices.csproj
    ```
+
+   Por defecto `dotnet run` toma la configuración de `launchSettings.json`. Para forzar la URL o el
+   ambiente por variables de entorno, agregar `--no-launch-profile`.
 
 ---
 
@@ -168,15 +175,46 @@ El proyecto implementa limitación de tasa para proteger el servicio:
 
 ### Caché no se actualiza
 
-**Solución**: Eliminar la base de datos de caché para forzar una nueva consulta a INFOR EAM:
+**Solución**: Eliminar el archivo de caché para forzar una nueva consulta a INFOR EAM. El archivo
+es `gridcache.db` y está en la raíz de la aplicación (según `ConnectionStrings:GridCache`), junto
+con sus archivos auxiliares `-wal` y `-shm`:
 
 ```bash
-rm ./cache/grid_cache.db
+rm gridcache.db gridcache.db-wal gridcache.db-shm
 ```
+
+Eliminarlo no produce pérdida de información: su contenido es una copia de datos que residen en
+INFOR EAM. La aplicación lo recrea al arrancar. El estado del archivo puede consultarse en el panel
+de diagnóstico, en `/diagnostics`.
 
 ### HTTP 429 - Too Many Requests
 
 **Solución**: Se ha excedido el límite de 60 requests por minuto. Esperar antes de realizar más solicitudes.
+
+---
+
+## 📚 Documentación
+
+Además de la documentación interactiva de endpoints (Scalar), existen dos guías formales en la
+biblioteca de documentación, en
+`D:\Aplicaciones\CLAUDE\02_projects\HGT\hgt-eam-web-services\docs\`:
+
+| Documento | Contenido |
+|---|---|
+| **Guía de instalación** | Requisitos, publicación por perfil, instalación en IIS, configuración, verificación y solución de problemas. |
+| **Guía técnica** | Arquitectura, recorrido de una petición, mecanismo de carga por lotes desde EAM, caché, seguridad y observabilidad. |
+| **Anexo — Valores por ambiente** | Datos concretos de cada instalación. |
+
+Cada una está disponible en Markdown (fuente de verdad) y en `.docx` para entrega.
+
+---
+
+## 🩺 Panel de diagnóstico
+
+La aplicación expone un panel interno en `/diagnostics`, protegido con las mismas credenciales de
+la API. Permite verificar el estado de la conexión con EAM, validar credenciales por organización,
+revisar la salud del archivo de caché, consultar métricas de rendimiento y visualizar el registro
+de eventos tanto del archivo local como de la base de datos.
 
 ---
 
@@ -186,5 +224,4 @@ Este proyecto es propiedad de **HGT (SAAM Terminals)** y está destinado únicam
 
 ---
 
-**Versión**: 1.0.0  
-**Última actualización**: 2026-02-15
+**Última actualización**: 2026-07-28
